@@ -2,111 +2,129 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+const Menu = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>;
+const Close = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>;
+
 export default function JobsPage() {
   const router = useRouter();
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [selectedJob, setSelectedJob] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [jobs, setJobs] = useState([]), [sel, setSel] = useState(null), [tab, setTab] = useState('QUOTE');
+  const [side, setSide] = useState(false), [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/jobs')
-      .then(res => res.json())
-      .then(data => {
-        const jobsData = Array.isArray(data) ? data : [];
-        setJobs(jobsData);
-        if (jobsData.length > 0) setSelectedJob(jobsData[0]);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    fetch('/api/jobs').then(res => res.json()).then(data => {
+      setJobs(data); setSel(data[0]); setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
-  if (loading) return (
-    <div className="h-screen bg-black text-orange-500 flex items-center justify-center font-black italic animate-pulse">
-      CONNECTING TO SYDNEY DATABASE...
-    </div>
-  );
+  if (loading) return <div className="h-screen bg-black text-blue-500 flex items-center justify-center font-black animate-pulse italic">SYNCING...</div>;
 
   return (
-    <div className="h-screen bg-[#0a0a0a] text-white flex flex-col md:flex-row overflow-hidden uppercase">
+    <div className="h-screen bg-[#0a0a0a] text-white flex flex-col uppercase font-sans text-[10px] font-bold overflow-hidden">
       
-      {/* MAIN CONTENT AREA (Beech mein data) */}
-      <div className="flex-1 flex flex-col bg-[#0a0a0a] order-2 md:order-1 overflow-y-auto custom-scrollbar">
-        {selectedJob ? (
-          <div className="p-6 md:p-12 animate-in fade-in duration-500">
-            <div className="mb-10 border-b border-white/10 pb-6">
-              <p className="text-orange-500 font-bold text-[10px] mb-1 tracking-widest">DETAILED VIEW</p>
-              <h1 className="text-4xl md:text-6xl font-black italic tracking-tighter uppercase leading-none">
-                {selectedJob.clientName}
-              </h1>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-[#111] p-6 border border-white/5">
-                <p className="text-blue-500 font-black text-[10px] mb-4 tracking-widest">CONTACT INFO</p>
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-gray-600 text-[9px] block">JOB IDENTIFIER</label>
-                    <p className="font-bold text-lg text-white">{selectedJob.jobId}</p>
-                  </div>
-                  <div>
-                    <label className="text-gray-600 text-[9px] block">CURRENT STATUS</label>
-                    <p className="font-bold text-white italic">{selectedJob.status}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-[#111] p-6 border border-white/5">
-                <p className="text-green-500 font-black text-[10px] mb-4 tracking-widest">SITE LOCATION</p>
-                <div>
-                  <label className="text-gray-600 text-[9px] block">ADDRESS</label>
-                  <p className="font-bold text-lg leading-tight">{selectedJob.siteAddress}</p>
-                </div>
-              </div>
-
-              <div className="md:col-span-2 bg-white/5 p-4 italic text-gray-500 text-[9px] border border-dashed border-white/10">
-                LATEST UPDATE: {new Date(selectedJob.updatedAt).toLocaleString()} | NODE: SYDNEY_GP3
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center opacity-20">
-            <p className="italic font-black text-2xl tracking-tighter">SELECT A RECORD</p>
-          </div>
-        )}
+      {/* NEW TOP BAR (Only Hamburger) */}
+      <div className="h-10 flex items-center justify-end px-4 border-b border-white/5 bg-[#0d0d0d]">
+        <button onClick={() => setSide(!side)} className="md:hidden text-blue-500 p-2 hover:bg-white/5 rounded"><Menu /></button>
       </div>
 
-      {/* RIGHT SIDEBAR (List) */}
-      <div className="w-full md:w-80 border-l border-white/10 bg-[#111] flex flex-col order-1 md:order-2">
-        <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black">
-          <h2 className="font-black italic text-sm tracking-widest">JOB_LIST</h2>
-          <span className="text-[10px] bg-orange-500 text-black font-bold px-2 py-0.5">{jobs.length}</span>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-2 space-y-2 bg-black/50">
-          {jobs.map((job) => (
-            <div 
-              key={job.id}
-              onClick={() => setSelectedJob(job)}
-              className={`p-4 cursor-pointer transition-all border-l-4 ${
-                selectedJob?.id === job.id 
-                ? 'bg-blue-600/20 border-blue-600' 
-                : 'bg-white/5 border-transparent hover:bg-white/10'
-              }`}
-            >
-              <p className="font-black text-xs truncate">{job.clientName}</p>
-              <p className="text-[9px] text-gray-600 truncate mt-1">{job.jobId} | {job.status}</p>
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* MAIN CONTENT AREA */}
+        <main className="flex-1 flex flex-col bg-[#0d0d0d] overflow-hidden">
+          
+          {/* TABS */}
+          <nav className="h-10 flex border-b border-white/10 bg-[#111] overflow-x-auto no-scrollbar">
+            {["ACTIONS", "BILLING", "COST & SELL", "QUOTE", "MEDIA", "EVENTS"].map(t => (
+              <button key={t} onClick={() => setTab(t)} className={`px-6 h-full border-b-2 transition-all ${tab === t ? 'border-blue-600 text-blue-500 bg-blue-500/5' : 'border-transparent text-gray-500'}`}>{t}</button>
+            ))}
+          </nav>
+
+          {/* DYNAMIC CONTENT */}
+          <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
+            <h2 className="text-3xl font-black italic mb-6 text-blue-500 tracking-tighter">{tab}</h2>
+            {/* DYNAMIC CONTENT - Line 45 se 62 tak replace karein */}
+  {/* DYNAMIC CONTENT AREA */}
+<div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
+  <h2 className="text-3xl font-black italic mb-6 text-blue-500 tracking-tighter">{tab}</h2>
+  
+  {!sel ? (
+    <div className="mt-20 text-center text-gray-700 italic border border-dashed border-white/5 p-10">SELECT_JOB_FROM_DATABASE</div>
+  ) : (
+    <div className="animate-in fade-in duration-500">
+
+      {/* 1. BILLING TAB - Ab ye dynamic hai */}
+      {tab === "BILLING" && (
+        <div className="border-l-4 border-yellow-500 bg-white/5 p-8 shadow-xl">
+          <p className="text-yellow-500 text-[8px] mb-2 tracking-widest uppercase">Billing for {sel.clientName}</p>
+          <div className="grid grid-cols-2 gap-10 font-mono mt-4">
+            <div>
+              <span className="text-gray-500 text-[7px] block mb-1">GST_REGISTRATION</span>
+              {/* Agar database me gstNo hai to dikhega, nahi to 'NOT_ADDED' */}
+              <p className="text-sm">{sel.gstNo || "NOT_ADDED"}</p> 
             </div>
-          ))}
+            <div>
+              <span className="text-gray-500 text-[7px] block mb-1">TOTAL_INVOICE_VALUE</span>
+              <p className="text-sm text-green-500">₹ {sel.amount || "0.00"}</p>
+            </div>
+          </div>
         </div>
+      )}
 
-        <button 
-          onClick={() => router.push('/jobs/add')}
-          className="p-5 bg-blue-600 font-black text-xs hover:bg-blue-700 transition-all active:scale-95"
-        >
-          + INITIALIZE NEW RECORD
-        </button>
+  {/* 2. COST & SELL TAB - Corrected Field Names */}
+{tab === "COST & SELL" && (
+  <div className="border-l-4 border-green-600 bg-white/5 p-8 shadow-xl">
+     <p className="text-green-500 text-[8px] mb-2 tracking-widest uppercase">Profit Analysis: {sel.clientName}</p>
+     <div className="flex gap-10 mt-4 font-mono">
+        {/* Yahan sel.cost ko sel.costPrice aur sel.sell ko sel.salePrice karein */}
+        <p><span className="text-gray-500 text-[7px] block mb-1">PURCHASE_COST</span>₹ {sel.costPrice || "0.00"}</p>
+        <p><span className="text-green-500 text-[7px] block mb-1">SELLING_PRICE</span>₹ {sel.salePrice || "0.00"}</p>
+     </div>
+  </div>
+)}
+
+      {/* 3. QUOTE TAB (Aapka Original Code) */}
+      {tab === "QUOTE" && (
+        <>
+          <div className="border-l-4 border-blue-600 bg-white/5 p-8 mb-6 shadow-xl">
+            <p className="text-blue-500 text-[8px] mb-2 tracking-widest">CLIENT_IDENTITY</p>
+            <h1 className="text-5xl font-black italic mb-4 tracking-tighter">{sel.clientName}</h1>
+            <div className="flex gap-10 text-xs font-mono border-t border-white/5 pt-4">
+              <p><span className="text-gray-500 text-[7px] block mb-1">PHONE_REF</span>{sel.phone}</p>
+              <p><span className="text-gray-500 text-[7px] block mb-1">EMAIL_ENC</span><span className="text-blue-400 lowercase">{sel.email}</span></p>
+            </div>
+          </div>
+        </>
+      )}
+
+    </div>
+  )}
+</div>
+     
+          </div>
+        </main>
+
+        {/* RIGHT SIDEBAR */}
+        <aside className={`fixed md:relative inset-y-0 right-0 w-72 bg-[#111] border-l border-white/10 flex flex-col transition-transform duration-300 ${side ? 'translate-x-0' : 'translate-x-full md:translate-x-0'} z-50 shadow-2xl`}>
+          <div className="p-4 border-b border-white/10 text-blue-500 flex justify-between items-center bg-black/40">
+            JOB_DATABASE 
+            <button onClick={() => setSide(false)} className="md:hidden hover:text-white transition-colors"><Close /></button>
+          </div>
+
+          {/* NEW JOB BUTTON (Now at Top) */}
+          <div className="p-2 border-b border-white/5 bg-black/20">
+            <button onClick={() => router.push('/jobs/add')} className="w-full bg-blue-600 py-2.5 font-black hover:bg-blue-500 transition-all active:scale-95 shadow-lg shadow-blue-900/20">
+              + NEW JOB
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+            {jobs.map(j => (
+              <div key={j.id} onClick={() => {setSel(j); setSide(false);}} className={`p-3 cursor-pointer border-l-2 transition-all ${sel?.id === j.id ? 'bg-blue-600/10 border-blue-600 text-white' : 'border-transparent text-gray-500 hover:bg-white/5 hover:text-gray-300'}`}>
+                <p className="truncate leading-none text-[11px]">{j.clientName}</p>
+                <p className="text-[7px] mt-1.5 opacity-50 font-mono tracking-tighter">{j.jobId}</p>
+              </div>
+            ))}
+          </div>
+        </aside>
       </div>
-
     </div>
   );
 }
