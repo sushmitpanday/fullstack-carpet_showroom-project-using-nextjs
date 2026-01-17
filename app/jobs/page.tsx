@@ -7,7 +7,7 @@ const Close = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" v
 
 export default function JobsPage() {
   const router = useRouter();
-  const [jobs, setJobs] = useState([]), [sel, setSel] = useState(null), [tab, setTab] = useState('QUOTE');
+const [jobs, setJobs] = useState<any>([]), [sel, setSel] = useState<any>(null), [tab, setTab] = useState('QUOTE');
   const [side, setSide] = useState(false), [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function JobsPage() {
       {/* 1. BILLING TAB - Ab ye dynamic hai */}
       {tab === "BILLING" && (
         <div className="border-l-4 border-yellow-500 bg-white/5 p-8 shadow-xl">
-          <p className="text-yellow-500 text-[8px] mb-2 tracking-widest uppercase">Billing for {sel.clientName}</p>
+          <p className="text-yellow-500 text-[8px] mb-2 tracking-widest uppercase">Billing for {sel?.clientName}</p>
           <div className="grid grid-cols-2 gap-10 font-mono mt-4">
             <div>
               <span className="text-gray-500 text-[7px] block mb-1">GST_REGISTRATION</span>
