@@ -116,7 +116,7 @@ const [jobs, setJobs] = useState<any>([]), [sel, setSel] = useState<any>(null), 
           </div>
           
           <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-            {jobs.map(j => (
+            {jobs.map((j: any) => (
               <div key={j.id} onClick={() => {setSel(j); setSide(false);}} className={`p-3 cursor-pointer border-l-2 transition-all ${sel?.id === j.id ? 'bg-blue-600/10 border-blue-600 text-white' : 'border-transparent text-gray-500 hover:bg-white/5 hover:text-gray-300'}`}>
                 <p className="truncate leading-none text-[11px]">{j.clientName}</p>
                 <p className="text-[7px] mt-1.5 opacity-50 font-mono tracking-tighter">{j.jobId}</p>
