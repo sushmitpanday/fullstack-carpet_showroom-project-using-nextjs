@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 const Menu = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>;
 const Close = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>;
 
+// Search Icon Component
+const SearchIcon = ({ className = "w-4 h-4" }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+);
+
 export default function JobsPage() {
   const router = useRouter();
   const [jobs, setJobs] = useState<any>([]), [sel, setSel] = useState<any>(null), [tab, setTab] = useState('QUOTE');
@@ -27,11 +34,13 @@ export default function JobsPage() {
     const formData = new FormData();
     formData.append("file", file);
     try {
+      // Relative URL for online deployment
       const res = await fetch("/api/python", { method: "POST", body: formData });
       const data = await res.json();
-      setAiResult(data.data);
+      // Pura data set kiya taaki 'similar' search results bhi milein
+      setAiResult(data);
     } catch (err) {
-      alert("Python Server Error: Make sure api/index.py is running!");
+      alert("AI ENGINE ERROR: CHECK BACKEND STATUS");
     } finally {
       setAiLoading(false);
     }
@@ -49,7 +58,6 @@ export default function JobsPage() {
       <div className="flex-1 flex overflow-hidden relative">
         <main className="flex-1 flex flex-col bg-[#0d0d0d] overflow-hidden">
           
-          {/* TABS - Added whitespace-nowrap to prevent wrapping */}
           <nav className="h-10 flex border-b border-white/10 bg-[#111] overflow-x-auto no-scrollbar whitespace-nowrap">
             {["ACTIONS", "BILLING", "COST & SELL", "QUOTE", "AI SCAN", "MEDIA", "EVENTS"].map(t => (
               <button key={t} onClick={() => setTab(t)} className={`px-6 h-full border-b-2 transition-all inline-block ${tab === t ? 'border-blue-600 text-blue-500 bg-blue-500/5' : 'border-transparent text-gray-500'}`}>{t}</button>
@@ -101,24 +109,59 @@ export default function JobsPage() {
                   </div>
                 )}
 
-                {/* DEEP LEARNING AI SCAN TAB */}
+                {/* AI SCAN & VISUAL SEARCH TAB */}
                 {tab === "AI SCAN" && (
-                  <div className="border-l-4 border-purple-600 bg-white/5 p-8 shadow-xl">
-                    <p className="text-purple-500 text-[8px] mb-2 tracking-widest uppercase">Deep Learning Neural Engine</p>
+                  <div className="border-l-4 border-purple-600 bg-white/5 p-8 shadow-xl relative">
+                    <p className="text-purple-500 text-[8px] mb-2 tracking-widest uppercase flex items-center gap-2">
+                      <SearchIcon className="w-3 h-3" />
+                      Neural Pattern Analysis & Visual Search
+                    </p>
                     <div className="mt-4 flex flex-col items-center border-2 border-dashed border-white/10 p-10 bg-black/40">
                       <input type="file" id="ai-scan" className="hidden" onChange={handleAIScan} />
-                      <label htmlFor="ai-scan" className="bg-purple-600 hover:bg-purple-500 text-white px-10 py-3 cursor-pointer transition-all active:scale-95">
-                        {aiLoading ? "SCANNING_PATTERNS..." : "UPLOAD_FOR_AI_SCAN"}
+                      
+                      <label htmlFor="ai-scan" className="group bg-purple-600 hover:bg-purple-500 text-white px-10 py-3 cursor-pointer transition-all active:scale-95 flex items-center gap-3">
+                        {aiLoading ? (
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        ) : (
+                          <SearchIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        )}
+                        <span className="tracking-widest">{aiLoading ? "SCANNING_INVENTORY..." : "START_VISUAL_SEARCH"}</span>
                       </label>
+
                       {aiResult && (
-                        <div className="mt-8 w-full grid grid-cols-2 gap-4 font-mono">
-                          <div className="bg-black/60 p-4 border border-purple-500/20">
-                            <span className="text-gray-500 text-[7px] block">PREDICTION</span>
-                            <p className="text-sm text-purple-400">{aiResult.prediction}</p>
+                        <div className="mt-8 w-full animate-in slide-in-from-bottom duration-500">
+                          {/* SECTION 1: AI SCAN (Prediction) */}
+                          <div className="grid grid-cols-2 gap-4 font-mono mb-8">
+                            <div className="bg-black/60 p-4 border border-purple-500/20">
+                              <span className="text-gray-500 text-[7px] block mb-1">PREDICTION_STYLE</span>
+                              <p className="text-sm text-purple-400">{aiResult.data?.prediction}</p>
+                            </div>
+                            <div className="bg-black/60 p-4 border border-purple-500/20">
+                              <span className="text-gray-500 text-[7px] block mb-1">MATCH_CONFIDENCE</span>
+                              <p className="text-sm text-green-500">{aiResult.data?.confidence}</p>
+                            </div>
                           </div>
-                          <div className="bg-black/60 p-4 border border-purple-500/20">
-                            <span className="text-gray-500 text-[7px] block">CONFIDENCE</span>
-                            <p className="text-sm text-green-500">{aiResult.confidence}</p>
+
+                          {/* SECTION 2: VISUAL SEARCH (Similar Results) */}
+                          <div className="border-t border-white/5 pt-6">
+                            <p className="text-blue-500 text-[8px] mb-4 tracking-[4px] uppercase flex items-center gap-2">
+                              <div className="h-1.5 w-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                              Similar_Matches_In_Stock
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {aiResult.similar?.map((item: any, i: number) => (
+                                <div key={i} className="bg-white/5 border border-white/5 p-4 flex justify-between items-center hover:border-blue-500/50 transition-all group">
+                                  <div>
+                                    <p className="text-[10px] text-gray-300 group-hover:text-white uppercase italic">{item.name}</p>
+                                    <p className="text-green-500 text-[12px] mt-1 font-mono">{item.price}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-[7px] text-gray-500 block">MATCH</span>
+                                    <span className="text-[10px] text-blue-500 font-bold">{item.match}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       )}
