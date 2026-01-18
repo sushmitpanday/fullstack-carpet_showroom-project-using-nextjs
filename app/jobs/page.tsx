@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 const Menu = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>;
 const Close = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>;
 
-// Search Icon Component
 const SearchIcon = ({ className = "w-4 h-4" }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -27,20 +26,34 @@ export default function JobsPage() {
     }).catch(() => setLoading(false));
   }, []);
 
-  const handleAIScan = async (e: any) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  // --- DATABASE SEARCH LOGIC (No PC Files) ---
+  const handleAIScan = async () => {
     setAiLoading(true);
-    const formData = new FormData();
-    formData.append("file", file);
     try {
-      // Relative URL for online deployment
-      const res = await fetch("/api/python", { method: "POST", body: formData });
+      // 1. Database (Inventory) se data uthayega
+      const invRes = await fetch('/api/inventory');
+      const invData = await invRes.json();
+
+      if (!invData || invData.length === 0) {
+        alert("DATABASE_EMPTY: NO_STOCK_IMAGES_FOUND");
+        setAiLoading(false);
+        return;
+      }
+
+      // 2. Python Backend ko data bhejega analysis ke liye
+      const res = await fetch("/api/python", { 
+        method: "POST", 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          source: "internal_db", 
+          payload: invData 
+        }) 
+      });
+      
       const data = await res.json();
-      // Pura data set kiya taaki 'similar' search results bhi milein
       setAiResult(data);
     } catch (err) {
-      alert("AI ENGINE ERROR: CHECK BACKEND STATUS");
+      alert("AI_ENGINE_OFFLINE: CHECK PYTHON BACKEND");
     } finally {
       setAiLoading(false);
     }
@@ -56,7 +69,7 @@ export default function JobsPage() {
       </div>
 
       <div className="flex-1 flex overflow-hidden relative">
-        <main className="flex-1 flex flex-col bg-[#0d0d0d] overflow-hidden">
+        <main className="flex-1 flex flex-col bg-[#0d0d0d] overflow-hidden relative">
           
           <nav className="h-10 flex border-b border-white/10 bg-[#111] overflow-x-auto no-scrollbar whitespace-nowrap">
             {["ACTIONS", "BILLING", "COST & SELL", "QUOTE", "AI SCAN", "MEDIA", "EVENTS"].map(t => (
@@ -70,20 +83,14 @@ export default function JobsPage() {
             {!sel ? (
               <div className="mt-20 text-center text-gray-700 italic border border-dashed border-white/5 p-10">SELECT_JOB_FROM_DATABASE</div>
             ) : (
-              <div className="animate-in fade-in duration-500">
+              <div className="animate-in fade-in duration-500 pb-20">
 
                 {tab === "BILLING" && (
                   <div className="border-l-4 border-yellow-500 bg-white/5 p-8 shadow-xl">
                     <p className="text-yellow-500 text-[8px] mb-2 tracking-widest uppercase">Billing for {sel?.clientName}</p>
                     <div className="grid grid-cols-2 gap-10 font-mono mt-4">
-                      <div>
-                        <span className="text-gray-500 text-[7px] block mb-1">GST_REGISTRATION</span>
-                        <p className="text-sm">{sel.gstNo || "NOT_ADDED"}</p> 
-                      </div>
-                      <div>
-                        <span className="text-gray-500 text-[7px] block mb-1">TOTAL_INVOICE_VALUE</span>
-                        <p className="text-sm text-green-500">₹ {sel.amount || "0.00"}</p>
-                      </div>
+                      <div><span className="text-gray-500 text-[7px] block mb-1">GST_REGISTRATION</span><p className="text-sm">{sel.gstNo || "NOT_ADDED"}</p></div>
+                      <div><span className="text-gray-500 text-[7px] block mb-1">TOTAL_INVOICE_VALUE</span><p className="text-sm text-green-500">₹ {sel.amount || "0.00"}</p></div>
                     </div>
                   </div>
                 )}
@@ -109,54 +116,57 @@ export default function JobsPage() {
                   </div>
                 )}
 
-                {/* AI SCAN & VISUAL SEARCH TAB */}
+                {/* --- AI SCAN: DATABASE ONLY --- */}
                 {tab === "AI SCAN" && (
                   <div className="border-l-4 border-purple-600 bg-white/5 p-8 shadow-xl relative">
                     <p className="text-purple-500 text-[8px] mb-2 tracking-widest uppercase flex items-center gap-2">
                       <SearchIcon className="w-3 h-3" />
-                      Neural Pattern Analysis & Visual Search
+                      Neural Pattern Analysis (Internal Inventory)
                     </p>
                     <div className="mt-4 flex flex-col items-center border-2 border-dashed border-white/10 p-10 bg-black/40">
-                      <input type="file" id="ai-scan" className="hidden" onChange={handleAIScan} />
                       
-                      <label htmlFor="ai-scan" className="group bg-purple-600 hover:bg-purple-500 text-white px-10 py-3 cursor-pointer transition-all active:scale-95 flex items-center gap-3">
+                      <button 
+                        onClick={handleAIScan}
+                        className="group bg-purple-600 hover:bg-purple-500 text-white px-10 py-4 cursor-pointer transition-all active:scale-95 flex items-center gap-3"
+                      >
                         {aiLoading ? (
                           <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         ) : (
-                          <SearchIcon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                          <SearchIcon className="w-4 h-4" />
                         )}
-                        <span className="tracking-widest">{aiLoading ? "SCANNING_INVENTORY..." : "START_VISUAL_SEARCH"}</span>
-                      </label>
+                        <span className="tracking-widest uppercase">
+                          {aiLoading ? "SCANNING_STOCK..." : "START_VISUAL_SEARCH_ON_DATABASE"}
+                        </span>
+                      </button>
 
                       {aiResult && (
                         <div className="mt-8 w-full animate-in slide-in-from-bottom duration-500">
-                          {/* SECTION 1: AI SCAN (Prediction) */}
                           <div className="grid grid-cols-2 gap-4 font-mono mb-8">
                             <div className="bg-black/60 p-4 border border-purple-500/20">
-                              <span className="text-gray-500 text-[7px] block mb-1">PREDICTION_STYLE</span>
+                              <span className="text-gray-500 text-[7px] block mb-1">PREDICTION</span>
                               <p className="text-sm text-purple-400">{aiResult.data?.prediction}</p>
                             </div>
                             <div className="bg-black/60 p-4 border border-purple-500/20">
-                              <span className="text-gray-500 text-[7px] block mb-1">MATCH_CONFIDENCE</span>
+                              <span className="text-gray-500 text-[7px] block mb-1">CONFIDENCE</span>
                               <p className="text-sm text-green-500">{aiResult.data?.confidence}</p>
                             </div>
                           </div>
 
-                          {/* SECTION 2: VISUAL SEARCH (Similar Results) */}
                           <div className="border-t border-white/5 pt-6">
-                            <p className="text-blue-500 text-[8px] mb-4 tracking-[4px] uppercase flex items-center gap-2">
-                              <div className="h-1.5 w-1.5 bg-blue-500 rounded-full animate-pulse"></div>
-                              Similar_Matches_In_Stock
-                            </p>
+                            <p className="text-blue-500 text-[8px] mb-4 tracking-[4px] uppercase flex items-center gap-2">DATABASE_MATCHES</p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               {aiResult.similar?.map((item: any, i: number) => (
                                 <div key={i} className="bg-white/5 border border-white/5 p-4 flex justify-between items-center hover:border-blue-500/50 transition-all group">
-                                  <div>
-                                    <p className="text-[10px] text-gray-300 group-hover:text-white uppercase italic">{item.name}</p>
-                                    <p className="text-green-500 text-[12px] mt-1 font-mono">{item.price}</p>
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-black border border-white/10 overflow-hidden">
+                                      {item.imageUrl && <img src={item.imageUrl} alt="stock" className="w-full h-full object-cover opacity-50 group-hover:opacity-100" />}
+                                    </div>
+                                    <div>
+                                      <p className="text-[10px] text-gray-300 group-hover:text-white uppercase italic">{item.name}</p>
+                                      <p className="text-green-500 text-[12px] mt-1 font-mono">{item.price || item.quantity}</p>
+                                    </div>
                                   </div>
                                   <div className="text-right">
-                                    <span className="text-[7px] text-gray-500 block">MATCH</span>
                                     <span className="text-[10px] text-blue-500 font-bold">{item.match}</span>
                                   </div>
                                 </div>
@@ -168,24 +178,19 @@ export default function JobsPage() {
                     </div>
                   </div>
                 )}
-
               </div>
             )}
+          </div>
+
+          <div className="absolute bottom-24 left-20 z-20">
+            <button onClick={() => router.push('/jobs/add')} className="px-12 py-5 bg-blue-600 text-[14px] font-black hover:bg-blue-500 transition-all active:scale-95 shadow-2xl shadow-blue-900/60 rounded-sm border border-blue-400/30 flex items-center gap-4 tracking-widest">
+              <span className="text-2xl leading-none">+</span> NEW_JOB
+            </button>
           </div>
         </main>
 
         <aside className={`fixed md:relative inset-y-0 right-0 w-72 bg-[#111] border-l border-white/10 flex flex-col transition-transform duration-300 ${side ? 'translate-x-0' : 'translate-x-full md:translate-x-0'} z-50 shadow-2xl`}>
-          <div className="p-4 border-b border-white/10 text-blue-500 flex justify-between items-center bg-black/40">
-            JOB_DATABASE 
-            <button onClick={() => setSide(false)} className="md:hidden hover:text-white transition-colors"><Close /></button>
-          </div>
-
-          <div className="p-2 border-b border-white/5 bg-black/20">
-            <button onClick={() => router.push('/jobs/add')} className="w-full bg-blue-600 py-2.5 font-black hover:bg-blue-500 transition-all active:scale-95 shadow-lg shadow-blue-900/20">
-              + NEW JOB
-            </button>
-          </div>
-          
+          <div className="p-4 border-b border-white/10 text-blue-500 flex justify-between items-center bg-black/40">JOB_DATABASE<button onClick={() => setSide(false)} className="md:hidden hover:text-white"><Close /></button></div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
             {jobs?.map((j: any) => (
               <div key={j.id} onClick={() => {setSel(j); setSide(false);}} className={`p-3 cursor-pointer border-l-2 transition-all ${sel?.id === j.id ? 'bg-blue-600/10 border-blue-600 text-white' : 'border-transparent text-gray-500 hover:bg-white/5 hover:text-gray-300'}`}>
