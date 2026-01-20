@@ -52,6 +52,16 @@ export default function JobsPage() {
       
       const data = await res.json();
       setAiResult(data);
+
+      // --- AUTO-POPULATE LOGIC ADDED HERE ---
+      if (data.status === "Success" && sel) {
+        setSel({
+          ...sel,
+          description: `AI_MATCH: ${data.data.prediction} | ${data.data.details}`
+        });
+      }
+      // ---------------------------------------
+
     } catch (err) {
       alert("AI_ENGINE_OFFLINE: CHECK PYTHON BACKEND");
     } finally {
@@ -112,6 +122,11 @@ export default function JobsPage() {
                     <div className="flex gap-10 text-xs font-mono border-t border-white/5 pt-4">
                       <p><span className="text-gray-500 text-[7px] block mb-1">PHONE_REF</span>{sel.phone}</p>
                       <p><span className="text-gray-500 text-[7px] block mb-1">EMAIL_ENC</span><span className="text-blue-400 lowercase">{sel.email}</span></p>
+                    </div>
+                    {/* Auto-populate check */}
+                    <div className="mt-4 p-4 bg-white/5 border border-white/10">
+                       <span className="text-gray-500 text-[7px] block mb-1 uppercase tracking-widest">Description / AI_Result</span>
+                       <p className="text-[12px] font-mono italic text-blue-400">{sel.description || "NO_DESCRIPTION_AVAILABLE"}</p>
                     </div>
                   </div>
                 )}

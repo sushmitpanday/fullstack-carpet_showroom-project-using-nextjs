@@ -2,3 +2,5 @@ flask
 flask-cors
 Pillow
 numpy
+gunicorn
+psycopg2-binary

@@ -48,11 +48,3 @@ export async function POST(req: Request) {
   }
 }
 
-// Zaroori: Agar aap purana Next.js version use kar rahe hain toh ye limit badhata hai
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb', // Isse aap 10MB tak ki photo bhej payenge
-    },
-  },
-};
