@@ -16,8 +16,11 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<any>([]), [sel, setSel] = useState<any>(null), [tab, setTab] = useState('QUOTE');
   const [side, setSide] = useState(false), [loading, setLoading] = useState(true);
 
-  // AI State
-  const [aiResult, setAiResult] = useState<any>(null);
+  // AI State - Initialized with nested object to allow immediate typing
+  const [aiResult, setAiResult] = useState<any>({
+    data: { prediction: "", confidence: "" },
+    similar: []
+  });
   const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(() => {
@@ -26,11 +29,9 @@ export default function JobsPage() {
     }).catch(() => setLoading(false));
   }, []);
 
-  // --- DATABASE SEARCH LOGIC (No PC Files) ---
   const handleAIScan = async () => {
     setAiLoading(true);
     try {
-      // 1. Database (Inventory) se data uthayega
       const invRes = await fetch('/api/inventory');
       const invData = await invRes.json();
 
@@ -40,7 +41,6 @@ export default function JobsPage() {
         return;
       }
 
-      // 2. Python Backend ko data bhejega analysis ke liye
       const res = await fetch("/api/python", { 
         method: "POST", 
         headers: { 'Content-Type': 'application/json' },
@@ -53,14 +53,12 @@ export default function JobsPage() {
       const data = await res.json();
       setAiResult(data);
 
-      // --- AUTO-POPULATE LOGIC ADDED HERE ---
       if (data.status === "Success" && sel) {
         setSel({
           ...sel,
           description: `AI_MATCH: ${data.data.prediction} | ${data.data.details}`
         });
       }
-      // ---------------------------------------
 
     } catch (err) {
       alert("AI_ENGINE_OFFLINE: CHECK PYTHON BACKEND");
@@ -123,7 +121,6 @@ export default function JobsPage() {
                       <p><span className="text-gray-500 text-[7px] block mb-1">PHONE_REF</span>{sel.phone}</p>
                       <p><span className="text-gray-500 text-[7px] block mb-1">EMAIL_ENC</span><span className="text-blue-400 lowercase">{sel.email}</span></p>
                     </div>
-                    {/* Auto-populate check */}
                     <div className="mt-4 p-4 bg-white/5 border border-white/10">
                        <span className="text-gray-500 text-[7px] block mb-1 uppercase tracking-widest">Description / AI_Result</span>
                        <p className="text-[12px] font-mono italic text-blue-400">{sel.description || "NO_DESCRIPTION_AVAILABLE"}</p>
@@ -131,7 +128,6 @@ export default function JobsPage() {
                   </div>
                 )}
 
-                {/* --- AI SCAN: DATABASE ONLY --- */}
                 {tab === "AI SCAN" && (
                   <div className="border-l-4 border-purple-600 bg-white/5 p-8 shadow-xl relative">
                     <p className="text-purple-500 text-[8px] mb-2 tracking-widest uppercase flex items-center gap-2">
@@ -154,42 +150,66 @@ export default function JobsPage() {
                         </span>
                       </button>
 
-                      {aiResult && (
-                        <div className="mt-8 w-full animate-in slide-in-from-bottom duration-500">
-                          <div className="grid grid-cols-2 gap-4 font-mono mb-8">
-                            <div className="bg-black/60 p-4 border border-purple-500/20">
-                              <span className="text-gray-500 text-[7px] block mb-1">PREDICTION</span>
-                              <p className="text-sm text-purple-400">{aiResult.data?.prediction}</p>
-                            </div>
-                            <div className="bg-black/60 p-4 border border-purple-500/20">
-                              <span className="text-gray-500 text-[7px] block mb-1">CONFIDENCE</span>
-                              <p className="text-sm text-green-500">{aiResult.data?.confidence}</p>
-                            </div>
+                      <div className="mt-8 w-full animate-in slide-in-from-bottom duration-500">
+                        <div className="grid grid-cols-2 gap-4 font-mono mb-8">
+                          {/* EDITABLE PREDICTION INPUT */}
+                          <div className="bg-black/60 p-4 border border-purple-500/20 focus-within:border-purple-500 transition-all">
+                            <span className="text-gray-500 text-[7px] block mb-1">PREDICTION (TYPE TO SEARCH)</span>
+                            <input 
+                              type="text"
+                              className="bg-transparent border-none outline-none text-sm text-purple-400 w-full uppercase placeholder:text-purple-900"
+                              placeholder="SEARCH_INVENTORY..."
+                              value={aiResult?.data?.prediction || ""}
+                              onChange={(e) => setAiResult({
+                                ...aiResult,
+                                data: { ...(aiResult?.data || {}), prediction: e.target.value }
+                              })}
+                            />
                           </div>
-
-                          <div className="border-t border-white/5 pt-6">
-                            <p className="text-blue-500 text-[8px] mb-4 tracking-[4px] uppercase flex items-center gap-2">DATABASE_MATCHES</p>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {aiResult.similar?.map((item: any, i: number) => (
-                                <div key={i} className="bg-white/5 border border-white/5 p-4 flex justify-between items-center hover:border-blue-500/50 transition-all group">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-black border border-white/10 overflow-hidden">
-                                      {item.imageUrl && <img src={item.imageUrl} alt="stock" className="w-full h-full object-cover opacity-50 group-hover:opacity-100" />}
-                                    </div>
-                                    <div>
-                                      <p className="text-[10px] text-gray-300 group-hover:text-white uppercase italic">{item.name}</p>
-                                      <p className="text-green-500 text-[12px] mt-1 font-mono">{item.price || item.quantity}</p>
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <span className="text-[10px] text-blue-500 font-bold">{item.match}</span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
+                          {/* EDITABLE CONFIDENCE INPUT */}
+                          <div className="bg-black/60 p-4 border border-purple-500/20 focus-within:border-green-500 transition-all">
+                            <span className="text-gray-500 text-[7px] block mb-1">CONFIDENCE</span>
+                            <input 
+                              type="text"
+                              className="bg-transparent border-none outline-none text-sm text-green-500 w-full uppercase placeholder:text-green-900"
+                              placeholder="100%"
+                              value={aiResult?.data?.confidence || ""}
+                              onChange={(e) => setAiResult({
+                                ...aiResult,
+                                data: { ...(aiResult?.data || {}), confidence: e.target.value }
+                              })}
+                            />
                           </div>
                         </div>
-                      )}
+
+                        <div className="border-t border-white/5 pt-6">
+                          <p className="text-blue-500 text-[8px] mb-4 tracking-[4px] uppercase flex items-center gap-2">DATABASE_MATCHES</p>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto custom-scrollbar">
+                            {/* Filtered Results based on Input */}
+                            {aiResult?.similar?.filter((item: any) => 
+                                item.name.toLowerCase().includes((aiResult?.data?.prediction || "").toLowerCase())
+                              ).map((item: any, i: number) => (
+                              <div key={i} className="bg-white/5 border border-white/5 p-4 flex justify-between items-center hover:border-blue-500/50 transition-all group">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-black border border-white/10 overflow-hidden">
+                                    {item.imageUrl && <img src={item.imageUrl} alt="stock" className="w-full h-full object-cover opacity-50 group-hover:opacity-100" />}
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] text-gray-300 group-hover:text-white uppercase italic">{item.name}</p>
+                                    <p className="text-green-500 text-[12px] mt-1 font-mono">{item.price || item.quantity}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-[10px] text-blue-500 font-bold">{item.match}</span>
+                                </div>
+                              </div>
+                            ))}
+                            {aiResult?.similar?.length > 0 && aiResult.similar.filter((item: any) => item.name.toLowerCase().includes((aiResult?.data?.prediction || "").toLowerCase())).length === 0 && (
+                                <div className="col-span-2 text-center text-gray-600 py-4 italic">NO_MATCHING_STOCK_FOUND</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
