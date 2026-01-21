@@ -40,7 +40,6 @@ export default function JobsPage() {
         return;
       }
 
-      // FIXED: Sending exactly what the Python script expects
       const res = await fetch("/api/python", { 
         method: "POST", 
         headers: { 'Content-Type': 'application/json' },
@@ -54,7 +53,6 @@ export default function JobsPage() {
 
       if (!res.ok) throw new Error(responseData.details || "BACKEND_ERROR");
 
-      // Normalizing the data
       const formattedData = {
         status: responseData.status || "Success",
         data: {
@@ -173,7 +171,10 @@ export default function JobsPage() {
                               type="text"
                               className="bg-transparent border-none outline-none text-sm text-purple-400 w-full uppercase"
                               value={aiResult?.data?.prediction || ""}
-                              readOnly 
+                              onChange={(e) => setAiResult({
+                                ...aiResult,
+                                data: { ...aiResult.data, prediction: e.target.value }
+                              })}
                             />
                           </div>
                           <div className="bg-black/60 p-4 border border-purple-500/20 focus-within:border-green-500 transition-all">
@@ -182,7 +183,10 @@ export default function JobsPage() {
                               type="text"
                               className="bg-transparent border-none outline-none text-sm text-green-500 w-full uppercase"
                               value={aiResult?.data?.confidence || ""}
-                              readOnly
+                              onChange={(e) => setAiResult({
+                                ...aiResult,
+                                data: { ...aiResult.data, confidence: e.target.value }
+                              })}
                             />
                           </div>
                         </div>
