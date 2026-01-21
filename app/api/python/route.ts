@@ -3,30 +3,27 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    console.log("Next.js Bridge: Sending data to Render...");
 
-    // Ab ye direct Render ke live URL se connect karega
-    const PYTHON_SERVER_URL = "https://fullstack-carpet-showroom-project-using-nextjs.onrender.com/analyze"; 
-
-    console.log("Connecting to Render Python Backend at:", PYTHON_SERVER_URL);
-
-    const response = await fetch(PYTHON_SERVER_URL, {
+    // Is URL ko dhyan se check karein (logs wala chota URL)
+    const response = await fetch('https://fullstack-carpet-showroom-project-using.onrender.com/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-        throw new Error(`Python Server Error: ${response.status}`);
+      console.error("Render Side Error:", data);
+      return NextResponse.json({ error: 'Backend Error', details: data }, { status: response.status });
     }
 
-    const aiData = await response.json();
-    return NextResponse.json(aiData);
-    
+    console.log("Render Success! Match Found.");
+    return NextResponse.json(data);
+
   } catch (error: any) {
-    console.error("PYTHON_BRIDGE_ERROR:", error.message);
-    return NextResponse.json(
-      { error: "PYTHON_SERVER_OFFLINE", details: error.message }, 
-      { status: 500 }
-    );
+    console.error("BRIDGE_ERROR:", error.message);
+    return NextResponse.json({ error: 'Bridge Connection Failed' }, { status: 500 });
   }
 }

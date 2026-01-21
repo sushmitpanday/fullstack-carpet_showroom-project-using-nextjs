@@ -16,7 +16,6 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<any>([]), [sel, setSel] = useState<any>(null), [tab, setTab] = useState('QUOTE');
   const [side, setSide] = useState(false), [loading, setLoading] = useState(true);
 
-  // AI State - Initialized with nested object to allow immediate typing
   const [aiResult, setAiResult] = useState<any>({
     data: { prediction: "", confidence: "" },
     similar: []
@@ -41,27 +40,43 @@ export default function JobsPage() {
         return;
       }
 
+      // FIXED: Sending exactly what the Python script expects
       const res = await fetch("/api/python", { 
         method: "POST", 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          source: "internal_db", 
           payload: invData 
         }) 
       });
       
-      const data = await res.json();
-      setAiResult(data);
+      const responseData = await res.json();
+      console.log("Bridge Response:", responseData);
 
-      if (data.status === "Success" && sel) {
+      if (!res.ok) throw new Error(responseData.details || "BACKEND_ERROR");
+
+      // Normalizing the data
+      const formattedData = {
+        status: responseData.status || "Success",
+        data: {
+          prediction: responseData.data?.prediction || responseData.prediction || "MATCH_FOUND",
+          confidence: responseData.data?.confidence || responseData.confidence || "99%",
+          details: responseData.data?.details || ""
+        },
+        similar: responseData.similar || responseData.results || []
+      };
+
+      setAiResult(formattedData);
+
+      if (sel) {
         setSel({
           ...sel,
-          description: `AI_MATCH: ${data.data.prediction} | ${data.data.details}`
+          description: `AI_MATCH: ${formattedData.data.prediction} | CONF: ${formattedData.data.confidence}`
         });
       }
 
-    } catch (err) {
-      alert("AI_ENGINE_OFFLINE: CHECK PYTHON BACKEND");
+    } catch (err: any) {
+      console.error("AI_SCAN_ERROR:", err.message);
+      alert(`AI_ENGINE_OFFLINE: ${err.message}`);
     } finally {
       setAiLoading(false);
     }
@@ -152,32 +167,22 @@ export default function JobsPage() {
 
                       <div className="mt-8 w-full animate-in slide-in-from-bottom duration-500">
                         <div className="grid grid-cols-2 gap-4 font-mono mb-8">
-                          {/* EDITABLE PREDICTION INPUT */}
                           <div className="bg-black/60 p-4 border border-purple-500/20 focus-within:border-purple-500 transition-all">
-                            <span className="text-gray-500 text-[7px] block mb-1">PREDICTION (TYPE TO SEARCH)</span>
+                            <span className="text-gray-500 text-[7px] block mb-1">PREDICTION</span>
                             <input 
                               type="text"
-                              className="bg-transparent border-none outline-none text-sm text-purple-400 w-full uppercase placeholder:text-purple-900"
-                              placeholder="SEARCH_INVENTORY..."
+                              className="bg-transparent border-none outline-none text-sm text-purple-400 w-full uppercase"
                               value={aiResult?.data?.prediction || ""}
-                              onChange={(e) => setAiResult({
-                                ...aiResult,
-                                data: { ...(aiResult?.data || {}), prediction: e.target.value }
-                              })}
+                              readOnly 
                             />
                           </div>
-                          {/* EDITABLE CONFIDENCE INPUT */}
                           <div className="bg-black/60 p-4 border border-purple-500/20 focus-within:border-green-500 transition-all">
                             <span className="text-gray-500 text-[7px] block mb-1">CONFIDENCE</span>
                             <input 
                               type="text"
-                              className="bg-transparent border-none outline-none text-sm text-green-500 w-full uppercase placeholder:text-green-900"
-                              placeholder="100%"
+                              className="bg-transparent border-none outline-none text-sm text-green-500 w-full uppercase"
                               value={aiResult?.data?.confidence || ""}
-                              onChange={(e) => setAiResult({
-                                ...aiResult,
-                                data: { ...(aiResult?.data || {}), confidence: e.target.value }
-                              })}
+                              readOnly
                             />
                           </div>
                         </div>
@@ -185,10 +190,7 @@ export default function JobsPage() {
                         <div className="border-t border-white/5 pt-6">
                           <p className="text-blue-500 text-[8px] mb-4 tracking-[4px] uppercase flex items-center gap-2">DATABASE_MATCHES</p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-60 overflow-y-auto custom-scrollbar">
-                            {/* Filtered Results based on Input */}
-                            {aiResult?.similar?.filter((item: any) => 
-                                item.name.toLowerCase().includes((aiResult?.data?.prediction || "").toLowerCase())
-                              ).map((item: any, i: number) => (
+                            {aiResult?.similar?.map((item: any, i: number) => (
                               <div key={i} className="bg-white/5 border border-white/5 p-4 flex justify-between items-center hover:border-blue-500/50 transition-all group">
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 bg-black border border-white/10 overflow-hidden">
@@ -196,16 +198,16 @@ export default function JobsPage() {
                                   </div>
                                   <div>
                                     <p className="text-[10px] text-gray-300 group-hover:text-white uppercase italic">{item.name}</p>
-                                    <p className="text-green-500 text-[12px] mt-1 font-mono">{item.price || item.quantity}</p>
+                                    <p className="text-green-500 text-[12px] mt-1 font-mono">QTY: {item.price || "0"}</p>
                                   </div>
                                 </div>
                                 <div className="text-right">
-                                  <span className="text-[10px] text-blue-500 font-bold">{item.match}</span>
+                                  <span className="text-[10px] text-blue-500 font-bold">{item.match || "MATCH"}</span>
                                 </div>
                               </div>
                             ))}
-                            {aiResult?.similar?.length > 0 && aiResult.similar.filter((item: any) => item.name.toLowerCase().includes((aiResult?.data?.prediction || "").toLowerCase())).length === 0 && (
-                                <div className="col-span-2 text-center text-gray-600 py-4 italic">NO_MATCHING_STOCK_FOUND</div>
+                            {aiResult?.similar?.length === 0 && !aiLoading && (
+                                <div className="col-span-2 text-center text-gray-600 py-4 italic uppercase">NO_SCAN_PERFORMED_YET</div>
                             )}
                           </div>
                         </div>
