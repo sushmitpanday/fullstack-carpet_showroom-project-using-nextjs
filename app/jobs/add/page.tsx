@@ -13,7 +13,7 @@ export default function JobCreationForm() {
     gstNo: '', billingAmount: '', cost: '', sell: '',
     quoteDate: '', initiatedDate: '', completedDate: '',
     salesRep: '', jobCategory: 'Real Estate', shop: 'Hallam',
-    // Naye Carpet Inputs
+    // Carpet Inputs
     carpetName: '', carpetColor: '', rawQuantity: '', 
     unitCost: '', unitSell: '', underlayCost: '', laborCost: ''
   };
@@ -63,21 +63,38 @@ export default function JobCreationForm() {
   const handleSave = async () => {
     if(!formData.name) return alert("Name is required");
     setLoading(true);
+    
+    // Prisma requires siteAddress as a single string
+    const fullAddress = `${formData.street}, ${formData.town}`.trim();
+
     try {
-      await fetch('/api/jobs', {
+      const response = await fetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          clientName: formData.name, // Prisma needs clientName
+          siteAddress: fullAddress || "Not Provided", // Fixes the Prisma error
           jobId: Math.floor(10000 + Math.random() * 90000).toString(),
-          amount: finalGrandTotal.toFixed(2), // Total amount mapped
+          amount: finalGrandTotal.toFixed(2), 
           calculatedProfit: estimatedProfit.toFixed(2),
           wastageQuantity: totalQtyWithWastage
         }),
       });
-      router.push('/jobs');
-    } catch (error) { console.error(error); } 
-    finally { setLoading(false); }
+
+      if (response.ok) {
+        router.push('/jobs');
+        router.refresh();
+      } else {
+        const err = await response.json();
+        alert("Error: " + (err.error || "Failed to save"));
+      }
+    } catch (error) { 
+      console.error(error); 
+      alert("Network Error");
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   return (
@@ -125,21 +142,21 @@ export default function JobCreationForm() {
             <section className="space-y-4 pt-4 border-t border-white/5">
                 <p className="text-yellow-500 text-[8px] tracking-widest underline">03_CARPET_SPECIFICATIONS</p>
                 <div className="grid grid-cols-2 gap-4">
-                    <input type="text" placeholder="CARPET NAME (BRAND/TYPE)" className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, carpetName: e.target.value})} />
-                    <input type="text" placeholder="COLOR (SHADE/CODE)" className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, carpetColor: e.target.value})} />
+                    <input type="text" placeholder="CARPET NAME (BRAND/TYPE)" value={formData.carpetName} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, carpetName: e.target.value})} />
+                    <input type="text" placeholder="COLOR (SHADE/CODE)" value={formData.carpetColor} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, carpetColor: e.target.value})} />
                 </div>
                 <div className="grid grid-cols-3 gap-4">
-                    <input type="number" placeholder="NET QTY (M2)" className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, rawQuantity: e.target.value})} />
+                    <input type="number" placeholder="NET QTY (M2)" value={formData.rawQuantity} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, rawQuantity: e.target.value})} />
                     <div className="bg-white/5 p-3 border border-white/10 text-blue-500 text-center flex items-center justify-center text-[8px]">{totalQtyWithWastage} M2 (+10%)</div>
                     <div className="bg-black border border-white/10 p-3 text-center opacity-50">GST 10%</div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                    <input type="number" placeholder="UNIT COST PRICE ($)" className="bg-black border border-white/10 p-3 outline-none border-l-2 border-l-red-500" onChange={(e)=>setFormData({...formData, unitCost: e.target.value})} />
-                    <input type="number" placeholder="UNIT SALE PRICE ($)" className="bg-black border border-white/10 p-3 outline-none border-l-2 border-l-green-500" onChange={(e)=>setFormData({...formData, unitSell: e.target.value})} />
+                    <input type="number" placeholder="UNIT COST PRICE ($)" value={formData.unitCost} className="bg-black border border-white/10 p-3 outline-none border-l-2 border-l-red-500" onChange={(e)=>setFormData({...formData, unitCost: e.target.value})} />
+                    <input type="number" placeholder="UNIT SALE PRICE ($)" value={formData.unitSell} className="bg-black border border-white/10 p-3 outline-none border-l-2 border-l-green-500" onChange={(e)=>setFormData({...formData, unitSell: e.target.value})} />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                    <input type="number" placeholder="UNDERLAY COST ($)" className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, underlayCost: e.target.value})} />
-                    <input type="number" placeholder="LABOR/INSTALL ($)" className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, laborCost: e.target.value})} />
+                    <input type="number" placeholder="UNDERLAY COST ($)" value={formData.underlayCost} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, underlayCost: e.target.value})} />
+                    <input type="number" placeholder="LABOR/INSTALL ($)" value={formData.laborCost} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, laborCost: e.target.value})} />
                 </div>
             </section>
           </div>
@@ -148,7 +165,7 @@ export default function JobCreationForm() {
             <div className="space-y-4">
               <p className="text-blue-400 text-[9px] border-b border-blue-500/30 pb-2">TIMELINE_&_ASSIGNMENT</p>
               <div className="grid grid-cols-1 gap-4">
-                <input type="date" className="bg-black border border-white/10 p-3 text-blue-400 outline-none" onChange={(e)=>setFormData({...formData, quoteDate: e.target.value})} />
+                <input type="date" value={formData.quoteDate} className="bg-black border border-white/10 p-3 text-blue-400 outline-none" onChange={(e)=>setFormData({...formData, quoteDate: e.target.value})} />
                 <select className="w-full bg-black border border-white/10 p-4 text-green-400 outline-none" value={formData.salesRep} onChange={(e) => setFormData({...formData, salesRep: e.target.value})}>
                   <option value="">-- SELECT SALES REP --</option>
                   <option value="John Doe">JOHN DOE</option>
