@@ -1,11 +1,11 @@
 import random
+import os
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
 
-# strict_slashes=False add kiya hai taaki /analyze aur /analyze/ dono chalein
 @app.route("/analyze", methods=["POST"], strict_slashes=False)
 def analyze_carpet():
     try:
@@ -18,35 +18,30 @@ def analyze_carpet():
         if not inventory:
             return jsonify({"error": "No data found in inventory"}), 400
 
-        main_item = inventory[0] 
-        prediction = main_item.get('jobName', 'Unknown')
-        details = main_item.get('description', 'No description available')
-        
+        # Sabhi items ko process kar rahe hain (Limit hata di gayi hai)
         similar_matches = []
-        for item in inventory[1:4]: 
+        for item in inventory:
             similar_matches.append({
-                "name": item.get('jobName'),
-                "match": f"{random.randint(80, 98)}%", 
+                "name": item.get('jobName', 'Unnamed Item'),
+                "match": f"{random.randint(85, 98)}%", 
                 "price": item.get('quantity', '0'),
-                "imageUrl": item.get('imageUrl') 
+                "imageUrl": item.get('imageUrl', '') 
             })
+
+        # Pehla item Prediction ke liye use kar rahe hain
+        prediction = inventory[0].get('jobName', 'Match Found')
 
         return jsonify({
             "status": "Success",
-            "data": {
-                "prediction": f"Match Found: {prediction}",
-                "pattern": "Detected from Database",
-                "confidence": f"{random.uniform(90.0, 99.0):.1f}%",
-                "details": details
-            },
+            "prediction": f"Match Found: {prediction}",
+            "confidence": f"{random.uniform(92.0, 99.0):.1f}%",
             "similar": similar_matches 
         })
     except Exception as e:
-        print(f"Error: {str(e)}") # Ye Render logs mein dikhega
+        print(f"Error: {str(e)}")
+        # Error ko string me bhej rahe hain taaki object error na aaye
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    # Render ke liye port 5000 standard hai par environment variable use karna behtar hai
-    import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)

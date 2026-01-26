@@ -5,9 +5,10 @@ export default function FrontPage() {
   const bubbles = [
     { name: "Jobs", size: "w-32 h-32 md:w-48 md:h-48", pos: "md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2", color: "text-green-500 text-xl md:text-3xl font-bold", slug: "jobs" },
     
-    // CALCULATOR: Ab iska color aur font baki bubbles jaisa hai
-    { name: "Calculator", size: "w-24 h-24 md:w-36 md:h-36", pos: "md:top-[25%] md:left-[25%]", color: "text-green-400 font-semibold text-[10px] md:text-lg", slug: "calculator" },
+    // NEW: Products bubble linked to Cost & Sell tab
+    { name: "Products", size: "w-28 h-28 md:w-40 md:h-40", pos: "md:top-1/2 md:left-[72%] md:-translate-y-1/2", color: "text-green-400 font-bold text-lg", slug: "jobs?tab=COST%20%26%20SELL" },
     
+    { name: "Calculator", size: "w-24 h-24 md:w-36 md:h-36", pos: "md:top-[25%] md:left-[25%]", color: "text-green-400 font-semibold text-[10px] md:text-lg", slug: "calculator" },
     { name: "Stock", size: "w-24 h-24 md:w-36 md:h-36", pos: "md:top-[12%] md:left-[35%]", color: "text-green-400 font-semibold", slug: "stock" },
     { name: "Bank", size: "w-24 h-24 md:w-36 md:h-36", pos: "md:top-[20%] md:right-[18%]", color: "text-green-400", slug: "bank" },
     { name: "Quick Sell", size: "w-28 h-28 md:w-40 md:h-40", pos: "md:top-1/2 md:left-[8%] md:-translate-y-1/2", color: "text-green-400", slug: "quick-sell" },
@@ -27,8 +28,6 @@ export default function FrontPage() {
 
   return (
     <div className="relative min-h-screen w-full bg-[#050510] overflow-x-hidden flex flex-col md:block p-6 md:p-0">
-      
-      {/* LEFT SIDEBAR */}
       <div className="z-20 flex md:flex-col flex-wrap justify-center gap-4 md:gap-10 mb-10 md:mb-0 md:absolute md:left-12 md:top-1/2 md:-translate-y-1/2">
         {sideButtons.map((btn) => (
           <Link href={`/${btn.slug}`} key={btn.name} className="min-w-[140px] md:min-w-0">
@@ -39,7 +38,6 @@ export default function FrontPage() {
         ))}
       </div>
 
-      {/* CENTER AREA (Bubbles) */}
       <div className="relative w-full h-full md:h-screen flex flex-wrap justify-center items-center gap-6 md:block">
         <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] border-2 border-green-900/10 rounded-full pointer-events-none"></div>
 
@@ -57,7 +55,6 @@ export default function FrontPage() {
         ))}
       </div>
 
-      {/* FOOTER */}
       <div className="hidden md:block absolute bottom-10 right-12 text-green-900 text-xs font-mono tracking-[0.5em]">
         TERMINAL_READY // 2026
       </div>
