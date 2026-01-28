@@ -11,7 +11,8 @@ export default function FrontPage() {
     { name: "Calculator", size: "w-24 h-24 md:w-36 md:h-36", pos: "md:top-[25%] md:left-[25%]", color: "text-green-400 font-semibold text-[10px] md:text-lg", slug: "calculator" },
     { name: "Stock", size: "w-24 h-24 md:w-36 md:h-36", pos: "md:top-[12%] md:left-[35%]", color: "text-green-400 font-semibold", slug: "stock" },
     { name: "Bank", size: "w-24 h-24 md:w-36 md:h-36", pos: "md:top-[20%] md:right-[18%]", color: "text-green-400", slug: "bank" },
-    { name: "Quick Sell", size: "w-28 h-28 md:w-40 md:h-40", pos: "md:top-1/2 md:left-[8%] md:-translate-y-1/2", color: "text-green-400", slug: "quick-sell" },
+    // FIXED: Changed left-[8%] to left-[18%] to move it right
+    { name: "Quick Sell", size: "w-28 h-28 md:w-40 md:h-40", pos: "md:top-1/2 md:left-[18%] md:-translate-y-1/2", color: "text-green-400", slug: "quick-sell" }, 
     { name: "Schedule", size: "w-24 h-24 md:w-36 md:h-36", pos: "md:bottom-[18%] md:right-[20%]", color: "text-green-400", slug: "schedule" },
     { name: "Me", size: "w-28 h-28 md:w-40 md:h-40", pos: "md:bottom-[8%] md:left-1/2 md:-translate-x-1/2", color: "text-green-500 text-xl", slug: "profile" },
     { name: "Creditors", size: "w-20 h-20 md:w-28 md:h-28", pos: "md:top-[8%] md:left-1/2 md:-translate-x-1/2", color: "text-green-300 text-xs md:text-sm", slug: "creditors" },

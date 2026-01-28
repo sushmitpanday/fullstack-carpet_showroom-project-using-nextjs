@@ -15,7 +15,7 @@ function JobsInterface() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
- const [jobs, setJobs] = useState<any[]>([]);// Default to empty array
+  const [jobs, setJobs] = useState<any[]>([]);
   const [sel, setSel] = useState(null);
   const [tab, setTab] = useState('QUOTE');
   const [side, setSide] = useState(false);
@@ -30,11 +30,46 @@ function JobsInterface() {
   const [activeSubList, setActiveSubList] = useState(null);
   const [cachedInventory, setCachedInventory] = useState([]);
 
+  // Auto-scan function logic
+  const handleAIScan = async () => {
+    setAiLoading(true);
+    try {
+      const invRes = await fetch('/api/inventory');
+      const invData = await invRes.json();
+      const inventoryArray = Array.isArray(invData) ? invData : [];
+      setCachedInventory(inventoryArray);
+
+      if (inventoryArray.length === 0) {
+        setAiLoading(false);
+        return;
+      }
+
+      const res = await fetch("/api/python", { 
+        method: "POST", 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payload: inventoryArray }) 
+      });
+      const responseData = await res.json();
+      if (res.ok) {
+        setAiResult({
+          data: {
+            prediction: responseData.prediction || "MATCH_FOUND",
+            confidence: responseData.confidence || "99%",
+          },
+          similar: responseData.similar || []
+        });
+      }
+    } catch (err) {
+      console.error("Auto-scan failed", err);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   useEffect(() => {
     const activeTab = searchParams.get('tab');
     if (activeTab) setTab(activeTab);
 
-    // FIXED: Added error handling and array validation
     fetch('/api/jobs')
       .then(res => res.ok ? res.json() : []) 
       .then(data => {
@@ -48,12 +83,8 @@ function JobsInterface() {
         setLoading(false);
       });
 
-    fetch('/api/inventory')
-      .then(res => res.json())
-      .then(data => {
-        setCachedInventory(Array.isArray(data) ? data : []);
-      })
-      .catch(err => console.error("Pre-fetch failed", err));
+    // TRIGGER AUTO-SCAN ON LOAD
+    handleAIScan();
   }, [searchParams]);
 
   const filteredMatches = useMemo(() => {
@@ -73,36 +104,6 @@ function JobsInterface() {
       item.name?.toLowerCase().includes(searchKeyword.toLowerCase())
     );
   }, [searchKeyword, aiResult.similar, cachedInventory]);
-
-  const handleAIScan = async () => {
-    setAiLoading(true);
-    try {
-      const invData = cachedInventory.length > 0 ? cachedInventory : await (await fetch('/api/inventory')).json();
-      if (!invData || invData.length === 0) {
-        alert("DATABASE_EMPTY");
-        setAiLoading(false);
-        return;
-      }
-      const res = await fetch("/api/python", { 
-        method: "POST", 
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payload: invData }) 
-      });
-      const responseData = await res.json();
-      if (!res.ok) throw new Error(responseData.error || "BACKEND_ERROR");
-      setAiResult({
-        data: {
-          prediction: responseData.prediction || "MATCH_FOUND",
-          confidence: responseData.confidence || "99%",
-        },
-        similar: responseData.similar || []
-      });
-    } catch (err) {
-      alert(`AI_ERROR: ${err.message}`);
-    } finally {
-      setAiLoading(false);
-    }
-  };
 
   if (loading) return <div className="h-screen bg-black text-blue-500 flex items-center justify-center font-black animate-pulse italic">SYNCING...</div>;
 
@@ -185,7 +186,7 @@ function JobsInterface() {
                 <div className="mt-4 flex flex-col items-center border-2 border-dashed border-white/10 p-10 bg-black/40">
                   <button onClick={handleAIScan} className="group bg-purple-600 hover:bg-purple-500 text-white px-10 py-4 cursor-pointer transition-all active:scale-95 flex items-center gap-3 mb-8">
                     {aiLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <SearchIcon className="w-4 h-4" />}
-                    <span className="tracking-widest uppercase">{aiLoading ? "SCANNING_STOCK..." : "ACTIVATE_DATABASE_SCAN"}</span>
+                    <span className="tracking-widest uppercase">{aiLoading ? "SCANNING_STOCK..." : "RE-SCAN DATABASE"}</span>
                   </button>
                   <div className="w-full">
                     <div className="grid grid-cols-2 gap-4 font-mono mb-8">
@@ -195,7 +196,7 @@ function JobsInterface() {
                       </div>
                       <div className="bg-black/60 p-4 border border-purple-500/20">
                         <span className="text-gray-500 text-[7px] block mb-1">SCAN_CONFIDENCE</span>
-                        <p className="text-sm text-green-500">{aiResult.data.confidence || "READY"}</p>
+                        <p className="text-sm text-green-500">{aiResult.data.confidence || (aiLoading ? "SCANNING..." : "READY")}</p>
                       </div>
                     </div>
                     <div className="border-t border-white/5 pt-6">
@@ -220,7 +221,9 @@ function JobsInterface() {
                             </div>
                           ))
                         ) : (
-                          <div className="col-span-2 text-center py-10 text-gray-700 italic border border-dashed border-white/5">NO_RESULTS_FOUND</div>
+                          <div className="col-span-2 text-center py-10 text-gray-700 italic border border-dashed border-white/5">
+                            {aiLoading ? "INITIALIZING SCAN..." : "NO_RESULTS_FOUND"}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -245,7 +248,6 @@ function JobsInterface() {
         <aside className={`fixed md:relative inset-y-0 right-0 w-72 bg-[#111] border-l border-white/10 flex flex-col transition-transform duration-300 ${side ? 'translate-x-0' : 'translate-x-full md:translate-x-0'} z-50 shadow-2xl`}>
           <div className="p-4 border-b border-white/10 text-blue-500 flex justify-between items-center bg-black/40">JOB_DATABASE<button onClick={() => setSide(false)} className="md:hidden hover:text-white"><Close /></button></div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-            {/* FIXED: Using Array.isArray for safety */}
             {Array.isArray(jobs) && jobs.map((j) => (
               <div key={j.id} onClick={() => {setSel(j); setSide(false);}} className={`p-3 cursor-pointer border-l-2 transition-all ${sel?.id === j.id ? 'bg-blue-600/10 border-blue-600 text-white' : 'border-transparent text-gray-500 hover:bg-white/5 hover:text-gray-300'}`}>
                 <p className="truncate leading-none text-[11px]">{j.clientName}</p>
