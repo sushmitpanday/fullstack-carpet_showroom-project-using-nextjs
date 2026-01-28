@@ -15,7 +15,7 @@ function JobsInterface() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  const [jobs, setJobs] = useState([]); // Default to empty array
+ const [jobs, setJobs] = useState<any[]>([]);// Default to empty array
   const [sel, setSel] = useState(null);
   const [tab, setTab] = useState('QUOTE');
   const [side, setSide] = useState(false);
