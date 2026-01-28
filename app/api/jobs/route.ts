@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server'; // 1. Ye zaroori hai error 23 ke liye
-import { prisma } from '@/app/lib/prisma';   // 2. Ye zaroori hai error 4 ke liye
+import { NextResponse } from 'next/server';
+import { prisma } from '@/app/lib/prisma';
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    
     const newJob = await prisma.job.create({
       data: {
         jobId: body.jobId,
@@ -12,25 +13,36 @@ export async function POST(request: Request) {
         status: "WIP",
         email: body.email || "",
         phone: body.phone || "",
-        
-        // Financial fields
         gstNo: body.gstNo || "",
-        amount: parseFloat(body.amount) || 0,
-        costPrice: parseFloat(body.cost) || 0,
-        salePrice: parseFloat(body.sell) || 0,
+        
+        // --- Financial Fields (Schema ke mutabiq String bhej rahe hain) ---
+        amount: String(body.amount || "0"),
+        calculatedProfit: String(body.calculatedProfit || "0"),
+        wastageQuantity: String(body.wastageQuantity || "0"),
+
+        // --- Naye Fields Jo Aapne Schema Mein Dale Hain ---
+        hardboard: body.hardboard || "",
+        glue: body.glue || "",
+        scotia: body.scotia || "",
+        disposal: body.disposal || "",
+        labourItem: body.labourItem || "",
       },
     });
+
     return NextResponse.json(newJob);
-  } catch (error) {
+  } catch (error: any) {
     console.error("DATABASE_ERROR:", error);
-    return NextResponse.json({ error: "Database error" }, { status: 500 });
+    // Error message detail mein dekhne ke liye isse update kiya
+    return NextResponse.json({ error: error.message || "Database error" }, { status: 500 });
   }
 }
 
 export async function GET() {
   try {
     const jobs = await prisma.job.findMany({
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      // Agar Jobs page pe inventory items bhi chahiye toh include use kar sakte hain
+      include: { inventoryItems: true } 
     });
     return NextResponse.json(jobs);
   } catch (error) {

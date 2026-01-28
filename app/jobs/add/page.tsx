@@ -15,7 +15,10 @@ export default function JobCreationForm() {
     salesRep: '', jobCategory: 'Real Estate', shop: 'Hallam',
     // Carpet Inputs
     carpetName: '', carpetColor: '', rawQuantity: '', 
-    unitCost: '', unitSell: '', underlayCost: '', laborCost: ''
+    unitCost: '', unitSell: '', underlayCost: '', laborCost: '',
+
+    //costitems
+    hardboard: '', glue: '',scotia: '',disposal: '', labourItem: ''
   };
 
   const [formData, setFormData] = useState(emptyForm);
@@ -60,7 +63,7 @@ export default function JobCreationForm() {
     }
   };
 
-  const handleSave = async () => {
+const handleSave = async () => {
     if(!formData.name) return alert("Name is required");
     setLoading(true);
     
@@ -73,12 +76,18 @@ export default function JobCreationForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          clientName: formData.name, // Prisma needs clientName
-          siteAddress: fullAddress || "Not Provided", // Fixes the Prisma error
+          clientName: formData.name, 
+          siteAddress: fullAddress || "Not Provided", 
           jobId: Math.floor(10000 + Math.random() * 90000).toString(),
           amount: finalGrandTotal.toFixed(2), 
           calculatedProfit: estimatedProfit.toFixed(2),
-          wastageQuantity: totalQtyWithWastage
+          wastageQuantity: totalQtyWithWastage,
+          // --- YE PANCH (5) FIELDS ADD KIYE HAIN ---
+          hardboard: formData.hardboard,
+          glue: formData.glue,
+          scotia: formData.scotia,
+          disposal: formData.disposal,
+          labourItem: formData.labourItem 
         }),
       });
 
@@ -97,7 +106,9 @@ export default function JobCreationForm() {
     }
   };
 
+
   return (
+    
     <div className="min-h-screen bg-[#0a0a0a] text-gray-300 p-4 md:p-6 uppercase text-[10px] font-bold italic">
       <div className="max-w-6xl mx-auto border border-white/10 bg-[#111] p-6 shadow-2xl">
         <div className="mb-6 flex justify-between items-center border-b border-white/10 pb-4">
@@ -160,6 +171,19 @@ export default function JobCreationForm() {
                 </div>
             </section>
           </div>
+            {/* 04_COST_AND_SELL_ITEMS */}
+<section className="space-y-4 pt-4 border-t border-white/5">
+  <p className="text-purple-500 text-[8px] tracking-widest underline">04_COST_AND_SELL_ITEMS</p>
+  <div className="grid grid-cols-2 gap-4">
+    <input type="text" placeholder="HARDBOARD" value={formData.hardboard} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, hardboard: e.target.value})} />
+    <input type="text" placeholder="GLUE" value={formData.glue} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, glue: e.target.value})} />
+  </div>
+  <div className="grid grid-cols-2 gap-4">
+    <input type="text" placeholder="SCOTIA" value={formData.scotia} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, scotia: e.target.value})} />
+    <input type="text" placeholder="LABOUR" value={formData.labourItem} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, labourItem: e.target.value})} />
+  </div>
+  <input type="text" placeholder="DISPOSAL" value={formData.disposal} className="w-full bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, disposal: e.target.value})} />
+</section>
 
           <div className="space-y-8 bg-white/5 p-6 border border-white/10 rounded-sm">
             <div className="space-y-4">

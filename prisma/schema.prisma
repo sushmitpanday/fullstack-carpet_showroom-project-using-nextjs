@@ -7,40 +7,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. Purana Job Model (Waisa hi hai, bas Inventory ke sath link kar diya hai)
 model Job {
-  id           Int             @id @default(autoincrement())
-  jobId        String          @unique
-  clientName   String
-  siteAddress  String
-  status       String          @default("WIP")
-  email        String?
-  phone        String?
-  gstNo        String?
-  amount       Float?          @default(0)
-  costPrice    Float?          @default(0)
-  salePrice    Float?          @default(0)
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id               Int             @id @default(autoincrement())
+  jobId            String          @unique
+  clientName       String
+  siteAddress      String
+  status           String          @default("WIP")
+  email            String?
+  phone            String?
+  gstNo            String?
+  amount           String?         
+  calculatedProfit String?
+  wastageQuantity  String?
   
-  // Job aur Inventory ka relation (Optionally link items to a job)
-  inventoryItems InventoryItem[] 
+  // Naye Fields
+  hardboard        String?
+  glue             String?
+  scotia           String?
+  disposal         String?
+  labourItem       String?
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  inventoryItems   InventoryItem[] 
 }
 
-// 2. Naya Model: Inventory Items (Stock aur Orders ke liye)
 model InventoryItem {
   id          Int      @id @default(autoincrement())
-  jobName     String   // Form ka 'Job Name/No' field
-  description String   // Product Description
-  quantity    String   // Qty field
-  notes       String?  // Additional Notes
-  imageUrl    String?  // Image path/URL store karne ke liye
-  status      String   @default("Active") // 'Active', 'Archive' etc.
-  
-  // Relation to Job model (Agar aap kisi specific Job ID se link karna chahe)
+  jobName     String
+  description String
+  quantity    String
+  notes       String?
+  imageUrl    String?
+  status      String   @default("Active")
   jobRefId    Int?
   job         Job?     @relation(fields: [jobRefId], references: [id])
-
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
