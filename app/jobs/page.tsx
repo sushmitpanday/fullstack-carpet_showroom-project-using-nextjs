@@ -15,6 +15,7 @@ function JobsInterface() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
+  // FIX 1: Added <any[]>
   const [jobs, setJobs] = useState<any[]>([]);
   const [sel, setSel] = useState(null);
   const [tab, setTab] = useState('QUOTE');
@@ -28,9 +29,10 @@ function JobsInterface() {
   const [searchKeyword, setSearchKeyword] = useState(""); 
   const [aiLoading, setAiLoading] = useState(false);
   const [activeSubList, setActiveSubList] = useState(null);
-  const [cachedInventory, setCachedInventory] = useState([]);
+  
+  // FIX 2: Added <any[]>
+  const [cachedInventory, setCachedInventory] = useState<any[]>([]);
 
-  // Auto-scan function logic
   const handleAIScan = async () => {
     setAiLoading(true);
     try {
@@ -83,7 +85,6 @@ function JobsInterface() {
         setLoading(false);
       });
 
-    // TRIGGER AUTO-SCAN ON LOAD
     handleAIScan();
   }, [searchParams]);
 
