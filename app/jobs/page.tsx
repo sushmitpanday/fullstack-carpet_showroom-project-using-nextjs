@@ -15,9 +15,9 @@ function JobsInterface() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // FIX 1: Added <any[]>
+  // FIXED: Types added to prevent build errors
   const [jobs, setJobs] = useState<any[]>([]);
-  const [sel, setSel] = useState(null);
+  const [sel, setSel] = useState<any>(null); 
   const [tab, setTab] = useState('QUOTE');
   const [side, setSide] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -28,9 +28,7 @@ function JobsInterface() {
   });
   const [searchKeyword, setSearchKeyword] = useState(""); 
   const [aiLoading, setAiLoading] = useState(false);
-  const [activeSubList, setActiveSubList] = useState(null);
-  
-  // FIX 2: Added <any[]>
+  const [activeSubList, setActiveSubList] = useState<any>(null);
   const [cachedInventory, setCachedInventory] = useState<any[]>([]);
 
   const handleAIScan = async () => {
