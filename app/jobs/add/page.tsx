@@ -9,13 +9,18 @@ export default function JobCreationForm() {
   const [selectedName, setSelectedName] = useState(""); 
 
   const emptyForm = {
-    name: '', street: '', town: '', phone: '', email: '',
+    name: '', street: '', town: '',billingAddress:'', phone: '', email: '',phone2:'',email2:'',
     gstNo: '', billingAmount: '', cost: '', sell: '',
     quoteDate: '', initiatedDate: '', completedDate: '',
     salesRep: '', jobCategory: 'Real Estate', shop: 'Hallam',
     // Carpet Inputs
     carpetName: '', carpetColor: '', rawQuantity: '', 
     unitCost: '', unitSell: '', underlayCost: '', laborCost: '',
+
+    // --- YE LINE ADD KAREIN ---
+    jobCategory: 'Real Estate',
+    jobSource: '',
+    terms: '',
 
     //costitems
     hardboard: '', glue: '',scotia: '',disposal: '', labourItem: ''
@@ -50,6 +55,9 @@ export default function JobCreationForm() {
         name: sourceData.clientName || '',
         phone: sourceData.phone || '',
         email: sourceData.email || '',
+        phone2: sourceData.phone2 || '',
+        email2: sourceData.email2 || '',
+        billingAddress: sourceData.billingAddress || '',
         street: sourceData.siteAddress?.split(',')[0] || '',
         town: sourceData.siteAddress?.split(',')[1]?.trim() || '',
       });
@@ -82,6 +90,15 @@ const handleSave = async () => {
           amount: finalGrandTotal.toFixed(2), 
           calculatedProfit: estimatedProfit.toFixed(2),
           wastageQuantity: totalQtyWithWastage,
+          // --- YE TEEN (3) DATES YAHAN ADD KAREIN ---
+          quoteDate: formData.quoteDate,
+          initiatedDate: formData.initiatedDate,
+          completedDate: formData.completedDate,
+
+          // --- YE NAYI FIELDS YAHAN ADD HO GAYI ---
+          jobCategory: formData.jobCategory,
+          jobSource: formData.jobSource,
+          terms: formData.terms,
           // --- YE PANCH (5) FIELDS ADD KIYE HAIN ---
           hardboard: formData.hardboard,
           glue: formData.glue,
@@ -105,6 +122,9 @@ const handleSave = async () => {
       setLoading(false); 
     }
   };
+
+ 
+
 
 
   return (
@@ -138,6 +158,7 @@ const handleSave = async () => {
               <div className="grid grid-cols-2 gap-4">
                 <input type="text" placeholder="STREET" value={formData.street} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, street: e.target.value})} />
                 <input type="text" placeholder="TOWN" value={formData.town} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, town: e.target.value})} />
+                  <input type="text" placeholder="BILLING-ADDRESS" value={formData.billingAddress} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, billingAddress: e.target.value})} />
               </div>
             </section>
 
@@ -146,30 +167,12 @@ const handleSave = async () => {
               <div className="grid grid-cols-2 gap-4">
                 <input type="text" placeholder="PHONE" value={formData.phone} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, phone: e.target.value})} />
                 <input type="email" placeholder="EMAIL" value={formData.email} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, email: e.target.value})} />
+                <input type="text" placeholder="PHONE2" value={formData.phone2} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, phone2: e.target.value})} />
+                <input type="email" placeholder="EMAIL2" value={formData.email2} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, email2: e.target.value})} />
               </div>
             </section>
 
-            {/* NEW CARPET INPUTS */}
-            <section className="space-y-4 pt-4 border-t border-white/5">
-                <p className="text-yellow-500 text-[8px] tracking-widest underline">03_CARPET_SPECIFICATIONS</p>
-                <div className="grid grid-cols-2 gap-4">
-                    <input type="text" placeholder="CARPET NAME (BRAND/TYPE)" value={formData.carpetName} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, carpetName: e.target.value})} />
-                    <input type="text" placeholder="COLOR (SHADE/CODE)" value={formData.carpetColor} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, carpetColor: e.target.value})} />
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                    <input type="number" placeholder="NET QTY (M2)" value={formData.rawQuantity} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, rawQuantity: e.target.value})} />
-                    <div className="bg-white/5 p-3 border border-white/10 text-blue-500 text-center flex items-center justify-center text-[8px]">{totalQtyWithWastage} M2 (+10%)</div>
-                    <div className="bg-black border border-white/10 p-3 text-center opacity-50">GST 10%</div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <input type="number" placeholder="UNIT COST PRICE ($)" value={formData.unitCost} className="bg-black border border-white/10 p-3 outline-none border-l-2 border-l-red-500" onChange={(e)=>setFormData({...formData, unitCost: e.target.value})} />
-                    <input type="number" placeholder="UNIT SALE PRICE ($)" value={formData.unitSell} className="bg-black border border-white/10 p-3 outline-none border-l-2 border-l-green-500" onChange={(e)=>setFormData({...formData, unitSell: e.target.value})} />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <input type="number" placeholder="UNDERLAY COST ($)" value={formData.underlayCost} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, underlayCost: e.target.value})} />
-                    <input type="number" placeholder="LABOR/INSTALL ($)" value={formData.laborCost} className="bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, laborCost: e.target.value})} />
-                </div>
-            </section>
+         
           </div>
             {/* 04_COST_AND_SELL_ITEMS */}
 <section className="space-y-4 pt-4 border-t border-white/5">
@@ -185,19 +188,131 @@ const handleSave = async () => {
   <input type="text" placeholder="DISPOSAL" value={formData.disposal} className="w-full bg-black border border-white/10 p-3 outline-none" onChange={(e)=>setFormData({...formData, disposal: e.target.value})} />
 </section>
 
-          <div className="space-y-8 bg-white/5 p-6 border border-white/10 rounded-sm">
+{/* TIMELINE SECTION */}
+<div className="grid grid-cols-1 gap-4">
+  {/* Quote Date */}
+  <div className="flex flex-col gap-1">
+    <label className="text-gray-600 text-[7px]">QUOTE_DATE</label>
+    <input 
+      type="date" 
+      style={{ colorScheme: 'dark' }} 
+      className="w-full bg-black border border-white/10 p-3 text-blue-400 outline-none" 
+      value={formData.quoteDate} 
+      onChange={(e)=>setFormData({...formData, quoteDate: e.target.value})} 
+    />
+  </div>
+
+  {/* Initiated Date */}
+  <div className="flex flex-col gap-1">
+    <label className="text-gray-600 text-[7px]">INITIATED_DATE</label>
+    <input 
+      type="date" 
+      style={{ colorScheme: 'dark' }}
+      className="w-full bg-black border border-white/10 p-3 text-yellow-500 outline-none" 
+      value={formData.initiatedDate} 
+      onChange={(e)=>setFormData({...formData, initiatedDate: e.target.value})} 
+    />
+  </div>
+
+  {/* Completed Date */}
+  <div className="flex flex-col gap-1">
+    <label className="text-gray-600 text-[7px]">COMPLETED_DATE</label>
+    <input 
+      type="date" 
+      style={{ colorScheme: 'dark' }}
+      className="w-full bg-black border border-white/10 p-3 text-green-500 outline-none" 
+      value={formData.completedDate} 
+      onChange={(e)=>setFormData({...formData, completedDate: e.target.value})} 
+    />
+  </div>
+</div>
+
+<div className="flex flex-col gap-1">
+  {/* Label Image jaisa Red color mein */}
+  <label className="text-red-500 text-[8px] font-bold uppercase tracking-widest">
+    Job Category
+  </label>
+  
+  <select 
+    className="w-full bg-[#1a1a1a] border border-white/20 p-3 text-gray-300 outline-none cursor-pointer focus:border-blue-500 transition-all"
+    value={formData.jobCategory}
+    onChange={(e) => setFormData({...formData, jobCategory: e.target.value})}
+  >
+    <option value="Builders">BUILDERS</option>
+    <option value="Insurance">INSURANCE</option>
+    <option value="Quick Sell">QUICK SELL</option>
+    <option value="Real Estate">REAL ESTATE</option>
+    <option value="Retail">RETAIL</option>
+    <option value="Ship & Bill">SHIP & BILL</option>
+    <option value="Supply Only">SUPPLY ONLY</option>
+    <option value="Wholesale">WHOLESALE</option>
+  </select>
+</div>
+
+<div className="grid grid-cols-1 gap-4 bg-white/5 p-4 border border-white/10 mt-4">
+  
+  {/* JOB SOURCE DROPDOWN */}
+  <div className="flex flex-col gap-1">
+    <label className="text-red-500 text-[8px] font-bold tracking-widest uppercase italic">
+      Job Source
+    </label>
+    <select 
+      className="w-full bg-black border border-white/20 p-3 text-gray-300 outline-none focus:border-blue-500"
+      value={formData.jobSource}
+      onChange={(e) => setFormData({...formData, jobSource: e.target.value})}
+    >
+      <option value="">-- SELECT SOURCE --</option>
+      <option value="Facebook">FACEBOOK</option>
+      <option value="Footy club">FOOTY CLUB</option>
+      <option value="Grey Army">GREY ARMY</option>
+      <option value="HiPages">HIPAGES</option>
+      <option value="Insurance">INSURANCE</option>
+      <option value="Local">LOCAL</option>
+      <option value="Phone">PHONE</option>
+      <option value="Refered">REFERED</option>
+      <option value="Repeat">REPEAT</option>
+      <option value="Walk In">WALK IN</option>
+      <option value="Website">WEBSITE</option>
+    </select>
+  </div>
+
+  {/* TERMS DROPDOWN */}
+  <div className="flex flex-col gap-1">
+    <label className="text-red-500 text-[8px] font-bold tracking-widest uppercase italic">
+      Terms
+    </label>
+    <select 
+      className="w-full bg-black border border-white/20 p-3 text-gray-300 outline-none focus:border-blue-500"
+      value={formData.terms}
+      onChange={(e) => setFormData({...formData, terms: e.target.value})}
+    >
+      <option value="">-- SELECT TERMS --</option>
+      <option value="30 Days, P/O">30 DAYS, P/O</option>
+      <option value="30 Days, Sign">30 DAYS, SIGN</option>
+      <option value="30% Deposit, Bal COD">30% DEPOSIT, BAL COD</option>
+      <option value="C.O.D.">C.O.D.</option>
+      <option value="C.O.D., Sign">C.O.D., SIGN</option>
+      <option value="Cash Sale, S/O">CASH SALE, S/O</option>
+      <option value="Finance">FINANCE</option>
+    </select>
+  </div>
+
+</div>
+          <div className="space-y-4 bg-white/5 p-6 border border-white/10 rounded-sm">
             <div className="space-y-4">
-              <p className="text-blue-400 text-[9px] border-b border-blue-500/30 pb-2">TIMELINE_&_ASSIGNMENT</p>
-              <div className="grid grid-cols-1 gap-4">
-                <input type="date" value={formData.quoteDate} className="bg-black border border-white/10 p-3 text-blue-400 outline-none" onChange={(e)=>setFormData({...formData, quoteDate: e.target.value})} />
+           
+         
+              
                 <select className="w-full bg-black border border-white/10 p-4 text-green-400 outline-none" value={formData.salesRep} onChange={(e) => setFormData({...formData, salesRep: e.target.value})}>
                   <option value="">-- SELECT SALES REP --</option>
                   <option value="John Doe">JOHN DOE</option>
                   <option value="Jane Smith">JANE SMITH</option>
+                   <option value="John Doe">SAMAI</option>
+                  <option value="Jane Smith">BRON</option>
                 </select>
-              </div>
+            
             </div>
-            <div className="pt-10">
+            <div className="pt-2">
                 <button onClick={handleSave} disabled={loading} className="w-full bg-blue-600 text-white p-5 font-black text-xs tracking-[4px] disabled:bg-gray-700">
                    {loading ? 'PROCESSING...' : 'INITIALIZE_JOB_RECORD'}
                 </button>

@@ -1,258 +1,266 @@
 "use client";
-import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+// UI Icons
 const Menu = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>;
 const Close = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>;
-
 const SearchIcon = ({ className = "w-4 h-4" }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-  </svg>
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
 );
 
 function JobsInterface() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
-  // FIXED: Types added to prevent build errors
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [sel, setSel] = useState<any>(null); 
-  const [tab, setTab] = useState('QUOTE');
-  const [side, setSide] = useState(false);
-  const [loading, setLoading] = useState(true);
+  // --- States ---
+  const [projectList, setProjectList] = useState<any[]>([]); // 'jobs' changed to projectList
+  const [activeJob, setActiveJob] = useState<any>(null);     // 'sel' changed to activeJob
+  const [currentTab, setCurrentTab] = useState('QUOTE');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [stockCache, setStockCache] = useState<any[]>([]);
 
-  const [aiResult, setAiResult] = useState({
-    data: { prediction: "", confidence: "" },
-    similar: []
+  const [scanState, setScanState] = useState({
+    results: { prediction: "STABLE", confidence: "0%" },
+    matches: [] as any[]
   });
-  const [searchKeyword, setSearchKeyword] = useState(""); 
-  const [aiLoading, setAiLoading] = useState(false);
+  
+  const [filterQuery, setFilterQuery] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
   const [activeSubList, setActiveSubList] = useState<any>(null);
-  const [cachedInventory, setCachedInventory] = useState<any[]>([]);
 
-  const handleAIScan = async () => {
-    setAiLoading(true);
+  // --- Optimized Data Fetching ---
+  const syncSystemData = useCallback(async () => {
+    setIsSyncing(true);
     try {
-      const invRes = await fetch('/api/inventory');
-      const invData = await invRes.json();
-      const inventoryArray = Array.isArray(invData) ? invData : [];
-      setCachedInventory(inventoryArray);
+      // Parallel fetching for speed
+      const [jobsRes, invRes] = await Promise.all([
+        fetch('/api/jobs').catch(() => null),
+        fetch('/api/inventory').catch(() => null)
+      ]);
 
-      if (inventoryArray.length === 0) {
-        setAiLoading(false);
-        return;
-      }
+      const jobsData = jobsRes?.ok ? await jobsRes.json() : [];
+      const invData = invRes?.ok ? await invRes.json() : [];
 
-      const res = await fetch("/api/python", { 
-        method: "POST", 
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payload: inventoryArray }) 
-      });
-      const responseData = await res.json();
-      if (res.ok) {
-        setAiResult({
-          data: {
-            prediction: responseData.prediction || "MATCH_FOUND",
-            confidence: responseData.confidence || "99%",
-          },
-          similar: responseData.similar || []
-        });
+      const cleanJobs = Array.isArray(jobsData) ? jobsData : [];
+      const cleanInv = Array.isArray(invData) ? invData : [];
+
+      setProjectList(cleanJobs);
+      setStockCache(cleanInv);
+
+      if (cleanJobs.length > 0 && !activeJob) {
+        setActiveJob(cleanJobs[0]);
       }
-    } catch (err) {
-      console.error("Auto-scan failed", err);
+    } catch (criticalError) {
+      console.error("System Sync Failure:", criticalError);
     } finally {
-      setAiLoading(false);
+      setIsSyncing(false);
+      setIsInitialLoad(false);
     }
-  };
+  }, [activeJob]);
 
   useEffect(() => {
-    const activeTab = searchParams.get('tab');
-    if (activeTab) setTab(activeTab);
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl) setCurrentTab(tabFromUrl);
+    syncSystemData();
+  }, [searchParams, syncSystemData]);
 
-    fetch('/api/jobs')
-      .then(res => res.ok ? res.json() : []) 
-      .then(data => {
-        const jobsArray = Array.isArray(data) ? data : [];
-        setJobs(jobsArray); 
-        setSel(jobsArray[0] || null); 
-        setLoading(false);
-      })
-      .catch(() => {
-        setJobs([]);
-        setLoading(false);
-      });
+  // --- High Performance Filtering (Handles 1000s of rows) ---
+  const optimizedMatches = useMemo(() => {
+    const base = scanState.matches.length > 0 ? scanState.matches : stockCache;
+    if (!filterQuery) return base.slice(0, 100); // Limit initial view for speed
 
-    handleAIScan();
-  }, [searchParams]);
+    const query = filterQuery.toLowerCase();
+    return base.filter(item => 
+      (item?.jobName || item?.name || "").toLowerCase().includes(query)
+    ).slice(0, 200); // UI performance buffer
+  }, [filterQuery, scanState.matches, stockCache]);
 
-  const filteredMatches = useMemo(() => {
-    let baseList = [];
-    if (aiResult.similar && aiResult.similar.length > 0) {
-        baseList = aiResult.similar;
-    } else {
-        baseList = cachedInventory.map((item) => ({
-            name: item.jobName || item.name,
-            price: item.quantity || item.price,
-            imageUrl: item.imageUrl,
-            match: "STOCK"
-        }));
-    }
-    if (!searchKeyword) return baseList;
-    return baseList.filter((item) => 
-      item.name?.toLowerCase().includes(searchKeyword.toLowerCase())
-    );
-  }, [searchKeyword, aiResult.similar, cachedInventory]);
-
-  if (loading) return <div className="h-screen bg-black text-blue-500 flex items-center justify-center font-black animate-pulse italic">SYNCING...</div>;
+  if (isInitialLoad) return <div className="h-screen bg-black text-blue-500 flex items-center justify-center font-mono animate-pulse">BOOTING_SYSTEM_v2.0...</div>;
 
   return (
     <div className="h-screen bg-[#0a0a0a] text-white flex flex-col uppercase font-sans text-[10px] font-bold overflow-hidden">
-      <div className="h-10 flex items-center justify-end px-4 border-b border-white/5 bg-[#0d0d0d]">
-        <button onClick={() => setSide(!side)} className="md:hidden text-blue-500 p-2 hover:bg-white/5 rounded"><Menu /></button>
+      {/* Header */}
+      <div className="h-10 flex items-center justify-between px-4 border-b border-white/5 bg-[#0d0d0d]">
+        <span className="text-gray-600 font-mono tracking-widest text-[8px]">CORE_ACCESS_LOADED</span>
+        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="md:hidden text-blue-500 p-2"><Menu /></button>
       </div>
 
       <div className="flex-1 flex overflow-hidden relative">
-        <main className="flex-1 flex flex-col bg-[#0d0d0d] overflow-hidden relative">
-          <nav className="h-10 flex border-b border-white/10 bg-[#111] overflow-x-auto no-scrollbar whitespace-nowrap">
-            {["ACTIONS", "BILLING", "COST & SELL", "QUOTE", "AI SCAN", "MEDIA", "EVENTS"].map(t => (
-              <button key={t} onClick={() => setTab(t)} className={`px-6 h-full border-b-2 transition-all inline-block ${tab === t ? 'border-blue-600 text-blue-500 bg-blue-500/5' : 'border-transparent text-gray-500'}`}>{t}</button>
+        <main className="flex-1 flex flex-col bg-[#0d0d0d] overflow-hidden">
+          {/* Navigation */}
+          <nav className="h-10 flex border-b border-white/10 bg-[#111] overflow-x-auto no-scrollbar">
+            {["ACTIONS", "BILLING", "COST & SELL", "QUOTE", "AI SCAN"].map(t => (
+              <button 
+                key={t} 
+                onClick={() => setCurrentTab(t)} 
+                className={`px-6 h-full border-b-2 transition-all ${currentTab === t ? 'border-blue-600 text-blue-400 bg-blue-500/5' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+              >
+                {t}
+              </button>
             ))}
           </nav>
 
           <div className="p-8 overflow-y-auto flex-1 custom-scrollbar">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-3xl font-black italic text-blue-500 tracking-tighter">{tab}</h2>
-              <button onClick={() => router.push('/jobs/add')} className="px-6 py-2 bg-blue-600 text-[10px] font-black hover:bg-blue-500 transition-all active:scale-95 shadow-lg shadow-blue-900/20 rounded-sm border border-blue-400/30 flex items-center gap-2 tracking-widest">
-                <span className="text-lg leading-none">+</span> NEW_JOB
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-4xl font-black italic text-blue-500 tracking-tighter opacity-80">{currentTab}</h2>
+              <button onClick={() => router.push('/jobs/add')} className="px-6 py-2 bg-blue-700 hover:bg-blue-600 rounded-sm flex items-center gap-3 transition-transform active:scale-95 shadow-xl shadow-blue-900/10">
+                <span className="text-lg">+</span> REGISTER_NEW_ENTRY
               </button>
             </div>
 
-            {sel && tab === "COST & SELL" && (
-              <div className="space-y-4">
-                {(() => {
-                  const dynamicItems = [
-                    { title: "Hardboard", value: sel.hardboard, type: "M" },
-                    { title: "Glue", value: sel.glue, type: "M" },
-                    { title: "Scotia", value: sel.scotia, type: "L" },
-                    { title: "Disposal", value: sel.disposal, type: "O" },
-                    { title: "Labour", value: sel.labourItem, type: "H" }
-                  ];
-
-                  return !activeSubList ? (
-                    <div className="grid gap-2 animate-in fade-in duration-300">
-                      <div className="border-l-4 border-green-500 bg-green-500/5 p-6 mb-2 flex justify-between items-end">
-                        <div>
-                          <p className="text-green-500 text-[8px] mb-1 tracking-widest uppercase font-black">Linked_Job_Data</p>
-                          <h1 className="text-2xl font-black italic tracking-tighter text-green-400">COST_&_SELL_ITEMS</h1>
-                        </div>
-                        <p className="text-[8px] text-gray-600 font-mono">STATUS: SYNCED_OK</p>
+            {/* Content Logic (Cost & Sell Section) */}
+            {activeJob && currentTab === "COST & SELL" && (
+              <div className="space-y-4 animate-in fade-in duration-500">
+                {!activeSubList ? (
+                  <div className="grid gap-2">
+                    {[
+                      { key: 'hardboard', label: 'HARDBOARD_STOCK' },
+                      { key: 'glue', label: 'ADHESIVE_GLUE' },
+                      { key: 'scotia', label: 'SCOTIA_BEADING' },
+                      { key: 'labourItem', label: 'LABOUR_ALLOCATION' }
+                    ].map((item) => (
+                      <div 
+                        key={item.key} 
+                        onClick={() => setActiveSubList({ title: item.label, value: activeJob[item.key] })}
+                        className="bg-[#141414] p-5 border border-white/5 hover:border-blue-500/40 cursor-pointer flex justify-between group"
+                      >
+                        <span className="group-hover:text-blue-400 transition-colors">{item.label}</span>
+                        <span className="text-gray-600 font-mono text-[8px]">REF: {activeJob?.jobId ?? '0000'}</span>
                       </div>
-                      {dynamicItems.map((cat, i) => (
-                        <div key={i} onClick={() => setActiveSubList(cat)} className="bg-[#111] p-4 border border-white/5 hover:border-blue-500/50 cursor-pointer flex justify-between items-center group transition-all">
-                          <div className="flex flex-col">
-                            <span className="text-[11px] group-hover:text-blue-400 tracking-widest">{cat.title.toUpperCase()}</span>
-                            <span className="text-[9px] text-gray-500 font-mono mt-1 italic">{cat.value ? `SAVED: ${cat.value}` : "EMPTY_FIELD"}</span>
-                          </div>
-                          <span className="text-blue-500 font-mono text-[9px] border border-blue-500/20 px-2 py-1 group-hover:bg-blue-600 group-hover:text-white transition-all">VIEW_DETAILS</span>
-                        </div>
-                      ))}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="animate-in slide-in-from-right-5 duration-300">
+                    <button onClick={() => setActiveSubList(null)} className="text-blue-500 mb-6 flex items-center gap-2 hover:underline">
+                      &larr; BACK_TO_MANIFEST
+                    </button>
+                    <div className="bg-black/40 border border-white/10 p-6 rounded">
+                       <h3 className="text-xl mb-4 text-blue-400 italic font-black">{activeSubList.title}</h3>
+                       <div className="grid gap-2">
+                         {String(activeSubList.value ?? "").split(',').filter(Boolean).map((val, idx) => (
+                           <div key={idx} className="bg-white/5 p-3 border-l-2 border-blue-600 flex justify-between">
+                             <span>{val.trim()}</span>
+                             <span className="text-gray-700">ITEM_{idx + 1}</span>
+                           </div>
+                         ))}
+                         {(!activeSubList.value) && <div className="p-10 text-center text-gray-800">NO_RECORDS_FOUND</div>}
+                       </div>
                     </div>
-                  ) : (
-                    <div className="animate-in slide-in-from-right-4 duration-300">
-                      <button onClick={() => setActiveSubList(null)} className="mb-4 text-blue-500 flex items-center gap-2 text-[9px] font-black hover:text-white transition-colors">&larr; RETURN_TO_LIST</button>
-                      <div className="bg-blue-600/10 p-5 border-l-4 border-blue-600 mb-6">
-                        <p className="text-[8px] text-blue-400 mb-1 tracking-[3px]">DATA_POINT</p>
-                        <h3 className="text-2xl font-black italic">{activeSubList.title.toUpperCase()}</h3>
-                      </div>
-                      <div className="bg-black/40 border border-white/5 p-10 flex flex-col items-center justify-center space-y-6">
-                        <p className="text-gray-600 text-[10px] tracking-widest uppercase">Information found in Database:</p>
-                        <div className="text-2xl text-white font-mono bg-white/5 px-8 py-4 border-b-2 border-blue-500 w-full text-center">{activeSubList.value || "--- DATA NOT PROVIDED ---"}</div>
-                        <div className="grid grid-cols-2 gap-4 w-full max-w-sm pt-4">
-                           <button className="bg-white/5 border border-white/10 p-3 text-[8px] hover:bg-white/10">EDIT_ENTRY</button>
-                           <button className="bg-blue-600 p-3 text-[8px] font-black hover:bg-blue-500">SYNC_TO_QUOTE</button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
+                  </div>
+                )}
               </div>
             )}
-            
-            {sel && tab === "AI SCAN" && (
-              <div className="border-l-4 border-purple-600 bg-white/5 p-8 shadow-xl relative">
-                <p className="text-purple-500 text-[8px] mb-2 tracking-widest uppercase flex items-center gap-2"><SearchIcon className="w-3 h-3" />Neural Pattern Analysis</p>
-                <div className="mt-4 flex flex-col items-center border-2 border-dashed border-white/10 p-10 bg-black/40">
-                  <button onClick={handleAIScan} className="group bg-purple-600 hover:bg-purple-500 text-white px-10 py-4 cursor-pointer transition-all active:scale-95 flex items-center gap-3 mb-8">
-                    {aiLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <SearchIcon className="w-4 h-4" />}
-                    <span className="tracking-widest uppercase">{aiLoading ? "SCANNING_STOCK..." : "RE-SCAN DATABASE"}</span>
-                  </button>
-                  <div className="w-full">
-                    <div className="grid grid-cols-2 gap-4 font-mono mb-8">
-                      <div className="bg-black/60 p-4 border border-purple-500/20 focus-within:border-purple-500 transition-all">
-                        <span className="text-gray-500 text-[7px] block mb-1">SEARCH_BY_NAME</span>
-                        <input type="text" placeholder="TYPE TO FILTER" className="bg-transparent border-none outline-none text-sm text-purple-400 w-full uppercase placeholder:text-gray-800" value={searchKeyword} onChange={(e) => setSearchKeyword(e.target.value)} />
-                      </div>
-                      <div className="bg-black/60 p-4 border border-purple-500/20">
-                        <span className="text-gray-500 text-[7px] block mb-1">SCAN_CONFIDENCE</span>
-                        <p className="text-sm text-green-500">{aiResult.data.confidence || (aiLoading ? "SCANNING..." : "READY")}</p>
-                      </div>
+
+            {/* AI Scan Section (Crash-Proofed for large data) */}
+            {currentTab === "AI SCAN" && (
+              <div className="space-y-6">
+                <div className="bg-purple-950/10 border border-purple-500/20 p-6 flex flex-col items-center">
+                  <div className="w-full flex gap-4 mb-6">
+                    <div className="flex-1 bg-black/60 p-4 border border-white/10">
+                      <p className="text-[7px] text-gray-500 mb-1 tracking-widest">LIVE_SEARCH_FILTER</p>
+                      <input 
+                        type="text" 
+                        value={filterQuery}
+                        onChange={(e) => setFilterQuery(e.target.value)}
+                        placeholder="ENTER_ITEM_NAME..." 
+                        className="bg-transparent w-full outline-none text-blue-400 placeholder:text-gray-800 uppercase"
+                      />
                     </div>
-                    <div className="border-t border-white/5 pt-6">
-                      <p className="text-blue-500 text-[8px] mb-4 tracking-[4px] uppercase flex justify-between">
-                        <span>DATABASE_MATCHES</span>
-                        <span>{filteredMatches.length} ITEMS FOUND</span>
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-80 overflow-y-auto custom-scrollbar">
-                        {filteredMatches.length > 0 ? (
-                          filteredMatches.map((item, i) => (
-                            <div key={i} className="bg-white/5 border border-white/5 p-4 flex justify-between items-center hover:border-blue-500/50 transition-all group">
-                              <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-black border border-white/10 overflow-hidden">
-                                  {item.imageUrl ? <img src={item.imageUrl} alt="stock" className="w-full h-full object-cover opacity-60 group-hover:opacity-100" /> : <div className="w-full h-full bg-white/5" />}
-                                </div>
-                                <div>
-                                  <p className="text-[11px] text-gray-300 group-hover:text-white uppercase italic">{item.name}</p>
-                                  <p className="text-green-500 text-[9px] mt-1 font-mono tracking-widest">STOCK: {item.price}</p>
-                                </div>
-                              </div>
-                              <div className="text-right"><span className="text-[10px] text-blue-500 font-bold bg-blue-500/10 px-2 py-1">{item.match}</span></div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="col-span-2 text-center py-10 text-gray-700 italic border border-dashed border-white/5">
-                            {aiLoading ? "INITIALIZING SCAN..." : "NO_RESULTS_FOUND"}
-                          </div>
-                        )}
-                      </div>
+                    <div className="w-1/3 bg-black/60 p-4 border border-white/10">
+                       <p className="text-[7px] text-gray-500 mb-1">HEALTH_STATUS</p>
+                       <p className="text-green-500">SYSTEM_OPTIMIZED</p>
                     </div>
+                  </div>
+                  
+                  <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[500px] overflow-y-auto p-2 custom-scrollbar">
+                    {optimizedMatches.map((item, i) => (
+                      <div key={i} className="bg-white/5 p-3 border border-transparent hover:border-blue-500/30 transition-all flex items-center gap-3 group">
+                        <div className="w-8 h-8 bg-black border border-white/10 flex-shrink-0">
+                          {item?.imageUrl && <img src={item.imageUrl} className="w-full h-full object-cover opacity-50 group-hover:opacity-100" />}
+                        </div>
+                        <div className="truncate">
+                          <p className="truncate text-gray-300">{item?.name || item?.jobName || "UNKNOWN_ITEM"}</p>
+                          <p className="text-green-600 text-[8px] font-mono">STOCK: {item?.quantity ?? item?.price ?? '0'}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
             )}
 
-            {sel && tab === "QUOTE" && (
-                <div className="border-l-4 border-blue-600 bg-white/5 p-8 mb-6 shadow-xl">
-                    <p className="text-blue-500 text-[8px] mb-2 tracking-widest">CLIENT_IDENTITY</p>
-                    <h1 className="text-5xl font-black italic mb-4 tracking-tighter">{sel.clientName}</h1>
-                    <div className="flex gap-10 text-xs font-mono border-t border-white/5 pt-4">
-                        <p><span className="text-gray-500 text-[7px] block mb-1">PHONE_REF</span>{sel.phone}</p>
-                        <p><span className="text-gray-500 text-[7px] block mb-1">EMAIL_ENC</span><span className="text-blue-400 lowercase">{sel.email}</span></p>
-                    </div>
-                </div>
-            )}
+            {/* Quote Tab */}
+          {/* Quote Tab - UPDATED VERSION */}
+{activeJob && currentTab === "QUOTE" && (
+  <div className="border-l-4 border-blue-600 bg-white/5 p-8 md:p-12 shadow-2xl animate-in zoom-in-95 duration-500">
+    <p className="text-blue-500 text-[8px] mb-2 tracking-[5px]">CLIENT_MASTER_RECORD</p>
+    
+    {/* Main Name */}
+    <h1 className="text-5xl md:text-7xl font-black italic mb-2 tracking-tighter leading-none text-white">
+      {activeJob?.clientName ?? "N/A"}
+    </h1>
+
+    {/* Address Section */}
+    <div className="mb-8 pb-6 border-b border-white/10">
+      <p className="text-blue-400/60 text-[7px] mb-2 tracking-widest">LOC_COORDINATES</p>
+      <div className="text-lg md:text-xl font-bold italic text-gray-300">
+        {activeJob?.siteAddress || "STREET_NOT_FOUND"}
+      </div>
+      <div className="text-[10px] text-gray-500 mt-1 uppercase">
+        BILLING: {activeJob?.billingAddress || "SAME_AS_SITE"}
+      </div>
+    </div>
+
+    {/* Contact Grid */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 font-mono">
+      {/* Phone Block */}
+      <div className="space-y-4">
+        <div>
+          <span className="text-gray-600 block text-[7px] mb-1 tracking-widest">PRIMARY_PHONE</span>
+          <span className="text-white text-sm">{activeJob?.phone ?? "---"}</span>
+        </div>
+        <div>
+          <span className="text-gray-600 block text-[7px] mb-1 tracking-widest">SECONDARY_PHONE</span>
+          <span className="text-white/60 text-xs">{activeJob?.phone2 ?? "---"}</span>
+        </div>
+      </div>
+
+      {/* Email Block */}
+      <div className="space-y-4">
+        <div>
+          <span className="text-gray-600 block text-[7px] mb-1 tracking-widest">PRIMARY_EMAIL</span>
+          <span className="text-blue-400 lowercase text-sm">{activeJob?.email ?? "---"}</span>
+        </div>
+        <div>
+          <span className="text-gray-600 block text-[7px] mb-1 tracking-widest">SECONDARY_EMAIL</span>
+          <span className="text-blue-400/60 lowercase text-xs">{activeJob?.email2 ?? "---"}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
           </div>
         </main>
 
-        <aside className={`fixed md:relative inset-y-0 right-0 w-72 bg-[#111] border-l border-white/10 flex flex-col transition-transform duration-300 ${side ? 'translate-x-0' : 'translate-x-full md:translate-x-0'} z-50 shadow-2xl`}>
-          <div className="p-4 border-b border-white/10 text-blue-500 flex justify-between items-center bg-black/40">JOB_DATABASE<button onClick={() => setSide(false)} className="md:hidden hover:text-white"><Close /></button></div>
+        {/* Sidebar with Infinite Scroll feel */}
+        <aside className={`fixed md:relative inset-y-0 right-0 w-72 bg-[#111] border-l border-white/10 flex flex-col transition-transform duration-300 z-50 ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}>
+          <div className="p-4 border-b border-white/10 bg-black/40 flex justify-between items-center text-blue-500">
+            <span>INDEX_REGISTRY</span>
+            <button onClick={() => setIsSidebarOpen(false)} className="md:hidden"><Close /></button>
+          </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-            {Array.isArray(jobs) && jobs.map((j) => (
-              <div key={j.id} onClick={() => {setSel(j); setSide(false);}} className={`p-3 cursor-pointer border-l-2 transition-all ${sel?.id === j.id ? 'bg-blue-600/10 border-blue-600 text-white' : 'border-transparent text-gray-500 hover:bg-white/5 hover:text-gray-300'}`}>
-                <p className="truncate leading-none text-[11px]">{j.clientName}</p>
-                <p className="text-[7px] mt-1.5 opacity-50 font-mono tracking-tighter">{j.jobId}</p>
+            {projectList.length > 0 ? projectList.map((job) => (
+              <div 
+                key={job.id} 
+                onClick={() => { setActiveJob(job); setIsSidebarOpen(false); }}
+                className={`p-3 cursor-pointer border-l-2 transition-all ${activeJob?.id === job.id ? 'bg-blue-600/10 border-blue-500 text-white' : 'border-transparent text-gray-500 hover:bg-white/5 hover:text-gray-300'}`}
+              >
+                <p className="truncate text-[11px] font-black">{job.clientName}</p>
+                <p className="text-[7px] mt-1 font-mono opacity-40">{job.jobId}</p>
               </div>
-            ))}
+            )) : <div className="text-center p-10 text-gray-800">LOADING_DATABASE...</div>}
           </div>
         </aside>
       </div>
@@ -262,7 +270,7 @@ function JobsInterface() {
 
 export default function JobsPage() {
   return (
-    <Suspense fallback={<div className="h-screen bg-black text-blue-500 flex items-center justify-center font-black">SYNCING_SYSTEM...</div>}>
+    <Suspense fallback={<div className="h-screen bg-black text-blue-500 flex items-center justify-center font-black animate-pulse">ESTABLISHING_ENCRYPTED_LINK...</div>}>
       <JobsInterface />
     </Suspense>
   );

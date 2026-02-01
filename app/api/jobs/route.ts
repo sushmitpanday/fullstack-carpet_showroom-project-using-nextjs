@@ -14,6 +14,9 @@ export async function POST(request: Request) {
         email: body.email || "",
         phone: body.phone || "",
         gstNo: body.gstNo || "",
+        billingAddress: body.billingAddress, 
+        phone2: body.phone2,
+        email2: body.email2,
         
         // --- Financial Fields (Schema ke mutabiq String bhej rahe hain) ---
         amount: String(body.amount || "0"),

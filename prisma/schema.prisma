@@ -12,6 +12,13 @@ model Job {
   jobId            String          @unique
   clientName       String
   siteAddress      String
+  
+  // --- YE TEEN FIELDS ADD KAREIN ---
+  billingAddress   String?         
+  phone2           String?         
+  email2           String?         
+  // ---------------------------------
+
   status           String          @default("WIP")
   email            String?
   phone            String?
@@ -19,6 +26,11 @@ model Job {
   amount           String?         
   calculatedProfit String?
   wastageQuantity  String?
+
+  // schema.prisma ke Job model mein add karein
+jobCategory String?
+jobSource   String?
+terms       String?
   
   // Naye Fields
   hardboard        String?
