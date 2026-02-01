@@ -18,7 +18,7 @@ export default function JobCreationForm() {
     unitCost: '', unitSell: '', underlayCost: '', laborCost: '',
 
     // --- YE LINE ADD KAREIN ---
-    jobCategory: 'Real Estate',
+    
     jobSource: '',
     terms: '',
 
